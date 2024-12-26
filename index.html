@@ -163,8 +163,12 @@
                     video: { facingMode: 'environment' }
                 });
                 cameraFeed.srcObject = stream;
-                await cameraFeed.play();
-                detectLandmarks();
+
+                // Wait for video element to be ready
+                cameraFeed.onloadedmetadata = () => {
+                    cameraFeed.play();
+                    detectLandmarks();
+                };
             } catch (error) {
                 console.error('Error accessing camera:', error);
                 alert('Camera access is required for this feature.');
