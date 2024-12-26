@@ -111,11 +111,9 @@
             <video id="camera-feed" autoplay playsinline></video>
             <canvas id="canvas" style="display:none;"></canvas>
             <div id="landmark-info">
-                <h2 id="landmark-name">Detecting Landmark...</h2>
+                <h2 id="landmark-name">No landmark detected</h2>
                 <div id="fact-carousel">
                     <div id="fact-container"></div>
-                    <button id="prev-fact">&#10094;</button>
-                    <button id="next-fact">&#10095;</button>
                 </div>
             </div>
         </section>
@@ -123,13 +121,13 @@
 
     <script>
         // DOM elements
+        const mainContent = document.getElementById('main-content');
         const startExploringBtn = document.getElementById('start-exploring');
         const cameraFeed = document.getElementById('camera-feed');
         const canvas = document.getElementById('canvas');
-        const landmarkNameElement = document.getElementById('landmark-name');
+        const landmarkInfo = document.getElementById('landmark-info');
+        const landmarkName = document.getElementById('landmark-name');
         const factContainer = document.getElementById('fact-container');
-        const prevFactBtn = document.getElementById('prev-fact');
-        const nextFactBtn = document.getElementById('next-fact');
 
         let currentFactIndex = 0;
 
@@ -144,9 +142,9 @@
 
         function showSection(sectionId) {
             document.querySelectorAll('main > section').forEach(section => {
-                section.classList.remove('active');
+                section.classList.add('hidden');
             });
-            document.getElementById(sectionId).classList.add('active');
+            document.getElementById(sectionId).classList.remove('hidden');
         }
 
         // Start exploring
@@ -162,6 +160,7 @@
                     video: { facingMode: 'environment' }
                 });
                 cameraFeed.srcObject = stream;
+                await cameraFeed.play();
                 detectLandmarks();
             } catch (error) {
                 console.error('Error accessing camera:', error);
@@ -169,7 +168,7 @@
             }
         }
 
-        // Landmark detection using Google Vision API
+        // Detect landmarks using Google Vision API
         async function detectLandmarks() {
             const ctx = canvas.getContext('2d');
             canvas.width = cameraFeed.videoWidth;
@@ -181,23 +180,26 @@
                 const base64Image = imageData.split(',')[1];
 
                 try {
-                    const response = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            requests: [{
-                                image: { content: base64Image },
-                                features: [{ type: 'LANDMARK_DETECTION', maxResults: 1 }]
-                            }]
-                        })
-                    });
+                    const response = await fetch(
+                        `https://vision.googleapis.com/v1/images:annotate?key=AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4`,
+                        {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                requests: [{
+                                    image: { content: base64Image },
+                                    features: [{ type: 'LANDMARK_DETECTION', maxResults: 1 }]
+                                }]
+                            })
+                        }
+                    );
 
                     const data = await response.json();
+                    console.log('Vision API Response:', data);
 
                     if (data.responses && data.responses[0].landmarkAnnotations) {
                         const landmark = data.responses[0].landmarkAnnotations[0];
+                        console.log(`Landmark detected: ${landmark.description}`);
                         updateLandmarkInfo(landmark.description);
                     } else {
                         updateLandmarkInfo("No landmark detected.");
@@ -207,16 +209,17 @@
                     updateLandmarkInfo("Error detecting landmark. Please try again.");
                 }
 
-                requestAnimationFrame(processFrame); // Continuously check for landmarks
+                setTimeout(processFrame, 2000); // Process every 2 seconds
             }
 
             processFrame();
         }
 
-        // Update Landmark Info using DBpedia API
-        async function updateLandmarkInfo(landmarkName) {
-            landmarkNameElement.textContent = landmarkName; // Display the detected landmark name
-            const facts = await getDBpediaFacts(landmarkName);
+        // Update landmark info and fetch facts
+        async function updateLandmarkInfo(landmark) {
+            landmarkName.textContent = landmark;
+
+            const facts = await getDBpediaFacts(landmark);
             updateFactCarousel(facts);
         }
 
@@ -232,45 +235,22 @@
             `;
             const url = `${endpoint}?query=${encodeURIComponent(query)}&format=json`;
 
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-                return data.results.bindings.length
-                    ? [data.results.bindings[0].abstract.value]
-                    : ['No facts available for this landmark.'];
-            } catch (error) {
-                console.error('Error fetching facts:', error);
-                return ['Unable to fetch facts. Please try again later.'];
-            }
+            const response = await fetch(url);
+            const data = await response.json();
+            return data.results.bindings.length
+                ? [data.results.bindings[0].abstract.value]
+                : ['No facts available for this landmark.'];
         }
 
         function updateFactCarousel(facts) {
             factContainer.innerHTML = '';
-            facts.forEach((fact, index) => {
+            facts.forEach((fact) => {
                 const factElement = document.createElement('div');
                 factElement.classList.add('fact');
                 factElement.textContent = fact.trim();
                 factContainer.appendChild(factElement);
             });
-            showFact(0);
         }
-
-        function showFact(index) {
-            factContainer.style.transform = `translateX(-${index * 100}%)`;
-            currentFactIndex = index;
-        }
-
-        prevFactBtn.addEventListener('click', () => {
-            if (currentFactIndex > 0) {
-                showFact(currentFactIndex - 1);
-            }
-        });
-
-        nextFactBtn.addEventListener('click', () => {
-            if (currentFactIndex < factContainer.children.length - 1) {
-                showFact(currentFactIndex + 1);
-            }
-        });
     </script>
 </body>
 </html>
