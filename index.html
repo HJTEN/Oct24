@@ -122,9 +122,6 @@
     </main>
 
     <script>
-        // OpenAI API key
-        const OPENAI_API_KEY = "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";
-
         // DOM elements
         const mainContent = document.getElementById('main-content');
         const startExploringBtn = document.getElementById('start-exploring');
@@ -201,10 +198,8 @@
                 const data = await response.json();
                 if (data.responses[0].landmarkAnnotations) {
                     const landmark = data.responses[0].landmarkAnnotations[0];
-                    updateLandmarkInfo(landmark.description);
-                } else {
-                    console.log("No landmark detected.");
-                    landmarkInfo.querySelector('h2').textContent = "No landmark detected.";
+                    const landmarkName = landmark.description;
+                    updateLandmarkInfo(landmarkName);
                 }
 
                 requestAnimationFrame(processFrame);
@@ -213,41 +208,36 @@
             processFrame();
         }
 
-        // Update Landmark Info using OpenAI GPT
-        async function updateLandmarkInfo(landmark) {
-            landmarkInfo.querySelector('h2').textContent = landmark;
-            const facts = await getLandmarkFactsWithGPT(landmark);
+        // Update Landmark Info using Hugging Face API
+        async function updateLandmarkInfo(landmarkName) {
+            landmarkInfo.querySelector('h2').textContent = landmarkName;
+            const facts = await getHuggingFaceFacts(landmarkName);
             updateFactCarousel(facts);
         }
 
-        async function getLandmarkFactsWithGPT(landmark) {
-            const prompt = `Provide interesting facts about the landmark called "${landmark}" in a concise and engaging way.`;
+        async function getHuggingFaceFacts(landmarkName) {
+            const endpoint = 'https://api-inference.huggingface.co/models/gpt2'; // GPT-2 Model endpoint
+            const headers = {
+                'Authorization': 'Bearer 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',
+                'Content-Type': 'application/json',
+            };
 
-            try {
-                const response = await fetch("https://api.openai.com/v1/completions", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${OPENAI_API_KEY}`
-                    },
-                    body: JSON.stringify({
-                        model: "text-davinci-003",
-                        prompt: prompt,
-                        max_tokens: 150,
-                        temperature: 0.7
-                    })
-                });
+            const prompt = `Tell me some interesting facts about the landmark called ${landmarkName}.`;
 
-                const data = await response.json();
-                if (data.choices && data.choices.length > 0) {
-                    return [data.choices[0].text.trim()];
-                } else {
-                    return ["No facts available for this landmark."];
-                }
-            } catch (error) {
-                console.error("Error fetching facts from OpenAI:", error);
-                return ["Error generating facts. Please try again later."];
-            }
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify({
+                    inputs: prompt,
+                    parameters: {
+                        max_length: 100,
+                        temperature: 0.7,
+                    }
+                })
+            });
+
+            const data = await response.json();
+            return data[0].generated_text.split('\n').map(fact => fact.trim());
         }
 
         function updateFactCarousel(facts) {
@@ -262,4 +252,21 @@
         }
 
         function showFact(index) {
-            factContainer.style.transform = `translateX(-${
+            factContainer.style.transform = `translateX(-${index * 100}%)`;
+            currentFactIndex = index;
+        }
+
+        prevFactBtn.addEventListener('click', () => {
+            if (currentFactIndex > 0) {
+                showFact(currentFactIndex - 1);
+            }
+        });
+
+        nextFactBtn.addEventListener('click', () => {
+            if (currentFactIndex < factContainer.children.length - 1) {
+                showFact(currentFactIndex + 1);
+            }
+        });
+    </script>
+</body>
+</html>
