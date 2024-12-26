@@ -64,34 +64,6 @@
             padding: 1rem;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
-
-        #fact-carousel {
-            margin-top: 1rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .fact {
-            margin-bottom: 1rem;
-            text-align: center;
-        }
-
-        #prev-fact,
-        #next-fact {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            padding: 0.5rem 1rem;
-            margin: 0.5rem;
-            cursor: pointer;
-        }
-
-        #prev-fact:hover,
-        #next-fact:hover {
-            background-color: #45a049;
-        }
     </style>
 </head>
 <body>
@@ -112,11 +84,7 @@
             <canvas id="canvas" style="display:none;"></canvas>
             <div id="landmark-info">
                 <h2>Landmark Name</h2>
-                <div id="fact-carousel">
-                    <div id="fact-container"></div>
-                    <button id="prev-fact">&#10094;</button>
-                    <button id="next-fact">&#10095;</button>
-                </div>
+                <p id="landmark-name">No landmark detected yet</p>
             </div>
         </section>
     </main>
@@ -127,12 +95,9 @@
         const cameraFeed = document.getElementById('camera-feed');
         const canvas = document.getElementById('canvas');
         const landmarkInfo = document.getElementById('landmark-info');
-        const factContainer = document.getElementById('fact-container');
-        const prevFactBtn = document.getElementById('prev-fact');
-        const nextFactBtn = document.getElementById('next-fact');
-        let currentFactIndex = 0;
+        const landmarkName = document.getElementById('landmark-name');
 
-        // Show the Explore section
+        // Show the Explore section when user clicks "Start Exploring"
         startExploringBtn.addEventListener('click', () => {
             showSection('explore');
             startCamera();
@@ -160,6 +125,7 @@
                 // When the video is ready to play
                 cameraFeed.onloadedmetadata = () => {
                     cameraFeed.play();
+                    console.log("Camera feed is playing");
                     detectLandmarks();  // Begin detecting landmarks after video starts
                 };
             } catch (error) {
@@ -196,8 +162,10 @@
                 const data = await response.json();
                 if (data.responses[0].landmarkAnnotations) {
                     const landmark = data.responses[0].landmarkAnnotations[0];
-                    const landmarkName = landmark.description;
-                    updateLandmarkInfo(landmarkName);  // Use the detected landmark name
+                    const landmarkNameText = landmark.description;
+                    updateLandmarkInfo(landmarkNameText);  // Use the detected landmark name
+                } else {
+                    landmarkName.textContent = "No landmark detected";
                 }
 
                 // Keep processing the frames
@@ -207,58 +175,10 @@
             processFrame();
         }
 
-        // Update Landmark Info (using Hugging Face API for generating facts)
-        async function updateLandmarkInfo(landmarkName) {
-            landmarkInfo.querySelector('h2').textContent = `Detected Landmark: ${landmarkName}`;
-            const facts = await getLandmarkFacts(landmarkName);
-            updateFactCarousel(facts);
+        // Update Landmark Info
+        function updateLandmarkInfo(name) {
+            landmarkName.textContent = `Detected Landmark: ${name}`;
         }
-
-        // Get facts for the detected landmark from Hugging Face API
-        async function getLandmarkFacts(landmarkName) {
-            const response = await fetch('https://api-inference.huggingface.co/models/gpt-2', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer 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'  // Replace with your Hugging Face API key
-                },
-                body: JSON.stringify({ inputs: `Tell me facts about ${landmarkName}` })
-            });
-
-            const data = await response.json();
-            return data.generated_text ? [data.generated_text] : [`No facts available for ${landmarkName}.`];
-        }
-
-        // Update fact carousel
-        function updateFactCarousel(facts) {
-            factContainer.innerHTML = '';
-            facts.forEach((fact, index) => {
-                const factElement = document.createElement('div');
-                factElement.classList.add('fact');
-                factElement.textContent = fact.trim();
-                factContainer.appendChild(factElement);
-            });
-            showFact(0);
-        }
-
-        // Show specific fact in the carousel
-        function showFact(index) {
-            factContainer.style.transform = `translateX(-${index * 100}%)`;
-            currentFactIndex = index;
-        }
-
-        // Event listeners for fact navigation
-        prevFactBtn.addEventListener('click', () => {
-            if (currentFactIndex > 0) {
-                showFact(currentFactIndex - 1);
-            }
-        });
-
-        nextFactBtn.addEventListener('click', () => {
-            if (currentFactIndex < factContainer.children.length - 1) {
-                showFact(currentFactIndex + 1);
-            }
-        });
     </script>
 </body>
 </html>
