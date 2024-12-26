@@ -111,26 +111,33 @@
             <video id="camera-feed" autoplay playsinline></video>
             <canvas id="canvas" style="display:none;"></canvas>
             <div id="landmark-info">
-                <h2 id="landmark-name">No landmark detected</h2>
+                <h2>Landmark Name</h2>
                 <div id="fact-carousel">
                     <div id="fact-container"></div>
+                    <button id="prev-fact">&#10094;</button>
+                    <button id="next-fact">&#10095;</button>
                 </div>
             </div>
         </section>
     </main>
 
     <script>
+        // OpenAI API key
+        const OPENAI_API_KEY = "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";
+
+        // DOM elements
         const mainContent = document.getElementById('main-content');
         const startExploringBtn = document.getElementById('start-exploring');
         const cameraFeed = document.getElementById('camera-feed');
         const canvas = document.getElementById('canvas');
-        const landmarkName = document.getElementById('landmark-name');
+        const landmarkInfo = document.getElementById('landmark-info');
         const factContainer = document.getElementById('fact-container');
+        const prevFactBtn = document.getElementById('prev-fact');
+        const nextFactBtn = document.getElementById('next-fact');
 
-        // Google Vision API Key
-        const GOOGLE_VISION_API_KEY = "AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4";
+        let currentFactIndex = 0;
 
-        // Navigation between sections
+        // Navigation
         document.querySelectorAll('nav a').forEach(link => {
             link.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -141,9 +148,9 @@
 
         function showSection(sectionId) {
             document.querySelectorAll('main > section').forEach(section => {
-                section.classList.remove('active');
+                section.classList.add('hidden');
             });
-            document.getElementById(sectionId).classList.add('active');
+            document.getElementById(sectionId).classList.remove('hidden');
         }
 
         // Start exploring
@@ -152,13 +159,14 @@
             startCamera();
         });
 
-        // Start camera functionality
+        // Camera functionality
         async function startCamera() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: 'environment' }
                 });
                 cameraFeed.srcObject = stream;
+                await cameraFeed.play();
                 detectLandmarks();
             } catch (error) {
                 console.error('Error accessing camera:', error);
@@ -166,95 +174,92 @@
             }
         }
 
-        // Detect landmarks using Google Vision API
+        // Landmark detection using Google Vision API
         async function detectLandmarks() {
             const ctx = canvas.getContext('2d');
+            canvas.width = cameraFeed.videoWidth;
+            canvas.height = cameraFeed.videoHeight;
 
             async function processFrame() {
-                canvas.width = cameraFeed.videoWidth;
-                canvas.height = cameraFeed.videoHeight;
-
-                // Capture the current frame
                 ctx.drawImage(cameraFeed, 0, 0, canvas.width, canvas.height);
                 const imageData = canvas.toDataURL('image/jpeg', 0.8);
                 const base64Image = imageData.split(',')[1];
 
-                try {
-                    const response = await fetch(
-                        `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_VISION_API_KEY}`,
-                        {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                requests: [{
-                                    image: { content: base64Image },
-                                    features: [{ type: 'LANDMARK_DETECTION', maxResults: 1 }]
-                                }]
-                            })
-                        }
-                    );
+                const response = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        requests: [{
+                            image: { content: base64Image },
+                            features: [{ type: 'LANDMARK_DETECTION', maxResults: 1 }]
+                        }]
+                    })
+                });
 
-                    const data = await response.json();
-                    if (data.responses && data.responses[0].landmarkAnnotations) {
-                        const landmark = data.responses[0].landmarkAnnotations[0].description;
-                        console.log(`Landmark detected: ${landmark}`);
-                        updateLandmarkInfo(landmark);
-                    } else {
-                        console.log('No landmark detected.');
-                        landmarkName.textContent = 'No landmark detected';
-                    }
-                } catch (error) {
-                    console.error('Error detecting landmarks:', error);
-                    landmarkName.textContent = 'Error detecting landmarks';
+                const data = await response.json();
+                if (data.responses[0].landmarkAnnotations) {
+                    const landmark = data.responses[0].landmarkAnnotations[0];
+                    updateLandmarkInfo(landmark.description);
+                } else {
+                    console.log("No landmark detected.");
+                    landmarkInfo.querySelector('h2').textContent = "No landmark detected.";
                 }
 
-                // Continuously process frames
                 requestAnimationFrame(processFrame);
             }
 
             processFrame();
         }
 
-        // Update UI with landmark info and fetch facts
+        // Update Landmark Info using OpenAI GPT
         async function updateLandmarkInfo(landmark) {
-            landmarkName.textContent = landmark;
-            const facts = await getDBpediaFacts(landmark);
+            landmarkInfo.querySelector('h2').textContent = landmark;
+            const facts = await getLandmarkFactsWithGPT(landmark);
             updateFactCarousel(facts);
         }
 
-        async function getDBpediaFacts(landmark) {
-            const endpoint = `https://dbpedia.org/sparql`;
-            const query = `
-                SELECT ?abstract WHERE {
-                    ?place rdfs:label "${landmark}"@en .
-                    ?place dbo:abstract ?abstract .
-                    FILTER(lang(?abstract) = "en")
-                }
-                LIMIT 1
-            `;
-            const url = `${endpoint}?query=${encodeURIComponent(query)}&format=json`;
+        async function getLandmarkFactsWithGPT(landmark) {
+            const prompt = `Provide interesting facts about the landmark called "${landmark}" in a concise and engaging way.`;
 
             try {
-                const response = await fetch(url);
+                const response = await fetch("https://api.openai.com/v1/completions", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${OPENAI_API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: "text-davinci-003",
+                        prompt: prompt,
+                        max_tokens: 150,
+                        temperature: 0.7
+                    })
+                });
+
                 const data = await response.json();
-                return data.results.bindings.length
-                    ? [data.results.bindings[0].abstract.value]
-                    : ['No facts available for this landmark.'];
+                if (data.choices && data.choices.length > 0) {
+                    return [data.choices[0].text.trim()];
+                } else {
+                    return ["No facts available for this landmark."];
+                }
             } catch (error) {
-                console.error('Error fetching facts from DBpedia:', error);
-                return ['Error fetching facts. Please try again later.'];
+                console.error("Error fetching facts from OpenAI:", error);
+                return ["Error generating facts. Please try again later."];
             }
         }
 
         function updateFactCarousel(facts) {
             factContainer.innerHTML = '';
-            facts.forEach(fact => {
+            facts.forEach((fact, index) => {
                 const factElement = document.createElement('div');
                 factElement.classList.add('fact');
-                factElement.textContent = fact;
+                factElement.textContent = fact.trim();
                 factContainer.appendChild(factElement);
             });
+            showFact(0);
         }
-    </script>
-</body>
-</html>
+
+        function showFact(index) {
+            factContainer.style.transform = `translateX(-${
