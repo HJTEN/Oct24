@@ -181,7 +181,7 @@
 
                 try {
                     const response = await fetch(
-                        `https://vision.googleapis.com/v1/images:annotate?key=$AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4`,
+                        `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_VISION_API_KEY}`,
                         {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
