@@ -12,7 +12,7 @@
             display: flex;
             flex-direction: column;
             min-height: 100vh;
-            overflow: hidden; /* Prevent scrolling that can affect zoom */
+            overflow: hidden;
         }
         header {
             background-color: #4CAF50;
@@ -36,9 +36,9 @@
             flex-direction: column;
             align-items: center;
             padding: 1em;
-            overflow-y: auto; /* Allow scrolling within the main content */
-            width: 100%; /* Ensure it uses full width */
-            box-sizing: border-box; /* Include padding in width */
+            overflow-y: auto;
+            width: 100%;
+            box-sizing: border-box;
         }
         #camera-feed {
             width: 100%;
@@ -147,9 +147,7 @@
         </section>
     </main>
 
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4&libraries=places"></script>
     <script>
-        // DOM elements
         const mainContent = document.getElementById('main-content');
         const startExploringBtn = document.getElementById('start-exploring');
         const cameraFeed = document.getElementById('camera-feed');
@@ -160,16 +158,12 @@
         const nextFactBtn = document.getElementById('next-fact');
         const placesList = document.getElementById('places-list');
 
-        // API keys and endpoints
-        const GOOGLE_API_KEY = 'AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4';
-        const VISION_API_ENDPOINT = `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`;
-        const WIKIPEDIA_API_ENDPOINT = 'https://en.wikipedia.org/w/api.php';
+        const GOOGLE_GEMINI_ENDPOINT = "https://us-central1-aiplatform.googleapis.com/v1/projects/modern-vortex-410710/locations/us-central1/publishers/google/models/gemini-1.5-flash:generateContent";
+        const API_KEY = "AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4"; // Replace with your actual API key
 
-        // Carousel variables
         let facts = [];
         let currentFactIndex = 0;
 
-        // Navigation
         document.querySelectorAll('nav a').forEach(link => {
             link.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -185,13 +179,11 @@
             document.getElementById(sectionId).classList.remove('hidden');
         }
 
-        // Start exploring
         startExploringBtn.addEventListener('click', () => {
             showSection('explore');
             startCamera();
         });
 
-        // Camera functionality
         async function startCamera() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
@@ -209,99 +201,47 @@
             }
         }
 
-        // Landmark detection using Google Vision API
-        async function detectLandmarks() {
+        async function captureImage() {
             const ctx = canvas.getContext('2d');
             canvas.width = cameraFeed.videoWidth;
             canvas.height = cameraFeed.videoHeight;
+            ctx.drawImage(cameraFeed, 0, 0, canvas.width, canvas.height);
+            return canvas.toDataURL('image/jpeg', 0.8);
+        }
 
-            async function processFrame() {
-                ctx.drawImage(cameraFeed, 0, 0, canvas.width, canvas.height);
-                const imageData = canvas.toDataURL('image/jpeg', 0.8);
-                const base64Image = imageData.split(',')[1];
+        async function getLandmarkFactsFromGeminiWithImage(base64Image) {
+            const payload = {
+                prompt: ["Tell me about this landmark"],
+                image: { base64: base64Image },
+            };
 
-                const response = await fetch(VISION_API_ENDPOINT, {
-                    method: 'POST',
+            try {
+                const response = await fetch(GOOGLE_GEMINI_ENDPOINT, {
+                    method: "POST",
                     headers: {
-                        'Content-Type': 'application/json',
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${API_KEY}`,
                     },
-                    body: JSON.stringify({
-                        requests: [{
-                            image: { content: base64Image },
-                            features: [{ type: 'LANDMARK_DETECTION', maxResults: 1 }]
-                        }]
-                    })
+                    body: JSON.stringify(payload),
                 });
+
+                if (!response.ok) {
+                    throw new Error(`Gemini API returned an error: ${response.statusText}`);
+                }
 
                 const data = await response.json();
-                if (data.responses[0].landmarkAnnotations) {
-                    const landmark = data.responses[0].landmarkAnnotations[0];
-                    updateLandmarkInfo(landmark.description);
-                    getNearbyPlaces(landmark.locations[0].latLng);
-                }
-
-                requestAnimationFrame(processFrame);
+                const content = data.candidates[0].content || "No facts available.";
+                return content.split(/\.\s+/).map(fact => `• ${fact.trim()}`);
+            } catch (error) {
+                console.error("Error fetching facts from Google Gemini:", error);
+                return ["• Unable to fetch facts at the moment. Please try again later."];
             }
-
-            processFrame();
         }
 
-        async function updateLandmarkInfo(landmarkName) {
-            landmarkInfo.querySelector('h2').textContent = landmarkName;
-            facts = await getWikipediaFacts(landmarkName);
+        async function detectLandmarks() {
+            const base64Image = await captureImage();
+            facts = await getLandmarkFactsFromGeminiWithImage(base64Image);
             updateFactCarousel();
-        }
-
-        // Updated getWikipediaFacts function to handle URL encoding and redirects
-        async function getWikipediaFacts(title) {
-            const encodedTitle = encodeURIComponent(title);  // Ensure the title is URL-safe
-            const params = new URLSearchParams({
-                action: 'query',
-                format: 'json',
-                titles: encodedTitle,  // Use the encoded title in the API request
-                prop: 'extracts',
-                exintro: true,
-                explaintext: true,
-                origin: '*'
-            });
-
-            const response = await fetch(`${WIKIPEDIA_API_ENDPOINT}?${params}`);
-            const data = await response.json();
-            
-            // Extract the first page and handle the possibility of redirects or no result
-            const pages = data.query.pages;
-            const pageId = Object.keys(pages)[0];
-            
-            // If no valid page is found, try an alternative approach like checking for redirects
-            if (pageId === "-1") {
-                console.warn("Landmark not found on Wikipedia, trying with a redirect search.");
-                const redirectParams = new URLSearchParams({
-                    action: 'query',
-                    format: 'json',
-                    titles: encodedTitle,
-                    prop: 'info',
-                    inprop: 'url',
-                    origin: '*'
-                });
-
-                const redirectResponse = await fetch(`${WIKIPEDIA_API_ENDPOINT}?${redirectParams}`);
-                const redirectData = await redirectResponse.json();
-                const redirectPages = redirectData.query.pages;
-                const redirectPageId = Object.keys(redirectPages)[0];
-
-                if (redirectPageId !== "-1") {
-                    // If a valid redirect page exists, extract its title and fetch facts again
-                    const redirectedTitle = redirectPages[redirectPageId].title;
-                    return await getWikipediaFacts(redirectedTitle);  // Recursively call with the redirected title
-                } else {
-                    return ['No description available or no Wikipedia page found.'];
-                }
-            }
-
-            const fullText = pages[pageId].extract || 'No description available.';
-            
-            // Split the description into sentences, and format them into a bullet-point list
-            return fullText.split(/(?<=\.|\?|\!)\s+/).map(sentence => `• ${sentence.trim()}`);
         }
 
         function updateFactCarousel() {
@@ -309,32 +249,15 @@
             facts.forEach((fact, index) => {
                 const factElement = document.createElement('div');
                 factElement.classList.add('fact');
-                
-                // Make sure that each fact is displayed in a separate bullet point
-                const factList = document.createElement('ul');
-                const factItem = document.createElement('li');
-                factItem.textContent = fact;
-                factList.appendChild(factItem);
-                factElement.appendChild(factList);
-                
+                factElement.textContent = fact.trim();
                 factContainer.appendChild(factElement);
             });
             showFact(0);
-            adjustCarouselHeight();
         }
 
         function showFact(index) {
             factContainer.style.transform = `translateX(-${index * 100}%)`;
             currentFactIndex = index;
-            adjustCarouselHeight();
-        }
-
-        function adjustCarouselHeight() {
-            const currentFact = factContainer.children[currentFactIndex];
-            if (currentFact) {
-                const factCarousel = document.getElementById('fact-carousel');
-                factCarousel.style.height = `${currentFact.offsetHeight}px`;
-            }
         }
 
         prevFactBtn.addEventListener('click', () => {
@@ -348,33 +271,6 @@
                 showFact(currentFactIndex + 1);
             }
         });
-
-        function getNearbyPlaces(location) {
-            const service = new google.maps.places.PlacesService(document.createElement('div'));
-            const request = {
-                location: location,
-                radius: '500',
-                type: ['point_of_interest']
-            };
-
-            service.nearbySearch(request, (results, status) => {
-                if (status === google.maps.places.PlacesServiceStatus.OK) {
-                    updateNearbyPlacesList(results);
-                }
-            });
-        }
-
-        function updateNearbyPlacesList(places) {
-            placesList.innerHTML = '';
-            places.slice(0, 5).forEach(place => {
-                const li = document.createElement('li');
-                li.textContent = place.name;
-                placesList.appendChild(li);
-            });
-        }
-
-        // Adjust carousel height on window resize
-        window.addEventListener('resize', adjustCarouselHeight);
     </script>
 </body>
 </html>
