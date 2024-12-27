@@ -12,7 +12,7 @@
             display: flex;
             flex-direction: column;
             min-height: 100vh;
-            background-color: #f8f8f8;
+            overflow: hidden;
         }
         header {
             background-color: #4CAF50;
@@ -36,6 +36,9 @@
             flex-direction: column;
             align-items: center;
             padding: 1em;
+            overflow-y: auto;
+            width: 100%;
+            box-sizing: border-box;
         }
         #camera-feed {
             width: 100%;
@@ -50,30 +53,29 @@
             max-width: 640px;
         }
         #fact-list {
-            list-style-type: disc;
-            padding-left: 20px;
             margin-top: 1em;
-            text-align: left;
-            font-size: 16px;
-            line-height: 1.5;
-        }
-        #fact-list li {
-            margin-bottom: 0.5em;
-        }
-        #nearby-places {
-            margin-top: 1em;
+            list-style-type: none;
+            padding: 0;
             width: 100%;
             max-width: 640px;
         }
-        #places-list {
-            list-style-type: none;
-            padding: 0;
-        }
-        #places-list li {
+        #fact-list li {
             background-color: #f1f1f1;
             margin: 0.5em 0;
             padding: 0.5em;
             border-radius: 5px;
+        }
+        #load-more-btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            margin-top: 1em;
+            font-size: 1em;
+        }
+        #load-more-btn:hover {
+            background-color: #45a049;
         }
         .hidden {
             display: none;
@@ -98,8 +100,9 @@
             <video id="camera-feed" autoplay playsinline></video>
             <canvas id="canvas" style="display:none;"></canvas>
             <div id="landmark-info">
-                <h2 id="landmark-name">Landmark Name</h2>
+                <h2>Landmark Name</h2>
                 <ul id="fact-list"></ul>
+                <button id="load-more-btn" class="hidden">Load More Facts</button>
             </div>
         </section>
         <section id="nearby" class="hidden">
@@ -109,7 +112,6 @@
     </main>
 
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4&libraries=places"></script>
-
     <script>
         // DOM elements
         const mainContent = document.getElementById('main-content');
@@ -118,16 +120,18 @@
         const canvas = document.getElementById('canvas');
         const landmarkInfo = document.getElementById('landmark-info');
         const factList = document.getElementById('fact-list');
+        const loadMoreBtn = document.getElementById('load-more-btn');
         const placesList = document.getElementById('places-list');
-        const landmarkName = document.getElementById('landmark-name');
 
-        // Your API keys
-        const GOOGLE_API_KEY = 'AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4'; // Vision & Places API key
-        const GEMINI_API_KEY = 'AIzaSyA2w8Bu0fMKH2_NUnssYF5HnmgnP101R8I'; // Gemini API key
-
-        // Endpoints
+        // API keys and endpoints
+        const GOOGLE_API_KEY = 'AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4';
         const VISION_API_ENDPOINT = `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`;
-        const GEMINI_API_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+        const GEMINI_API_KEY = 'AIzaSyA2w8Bu0fMKH2_NUnssYF5HnmgnP101R8I';
+        const GEMINI_API_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+
+        // Carousel variables
+        let facts = [];
+        let currentFactIndex = 0;
 
         // Navigation
         document.querySelectorAll('nav a').forEach(link => {
@@ -205,29 +209,36 @@
 
         async function updateLandmarkInfo(landmarkName) {
             landmarkInfo.querySelector('h2').textContent = landmarkName;
-            const facts = await getGeminiFacts(landmarkName);
-            displayFacts(facts);
+            facts = await getGeminiFacts(landmarkName);
+            displayFactList();
         }
 
         async function getGeminiFacts(landmarkName) {
             const prompt = `Give me 5 interesting facts about ${landmarkName}. Present each fact as a complete sentence. Focus on historical significance, architectural details, and cultural importance.`;
 
             try {
-                const response = await fetch(GEMINI_API_ENDPOINT, {
+                const response = await fetch(`${GEMINI_API_ENDPOINT}?key=${GEMINI_API_KEY}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
                         contents: [{
-                            parts: [{ text: prompt }]
+                            parts: [{
+                                text: prompt
+                            }]
                         }]
                     })
                 });
 
                 const data = await response.json();
+                
+                // Extract the generated text from Gemini's response
                 const generatedText = data.candidates[0].content.parts[0].text;
+                
+                // Split the text into individual facts
                 const facts = generatedText.split(/(?<=\.|\?|\!)\s+/).filter(fact => fact.trim().length > 0);
+                
                 return facts.length > 0 ? facts : ['No information available.'];
             } catch (error) {
                 console.error('Error fetching facts from Gemini:', error);
@@ -235,36 +246,63 @@
             }
         }
 
-        function displayFacts(facts) {
+        function displayFactList() {
             factList.innerHTML = '';
-            facts.forEach(fact => {
+            facts.slice(0, 10).forEach(fact => {
                 const factItem = document.createElement('li');
-                factItem.textContent = fact;
+                factItem.textContent = fact.trim();
                 factList.appendChild(factItem);
             });
+
+            // Show the "Load More Facts" button if there are more facts
+            if (facts.length > 10) {
+                loadMoreBtn.classList.remove('hidden');
+                loadMoreBtn.addEventListener('click', loadMoreFacts);
+            } else {
+                loadMoreBtn.classList.add('hidden');
+            }
         }
 
-        async function getNearbyPlaces(latLng) {
+        function loadMoreFacts() {
+            const currentFactCount = factList.children.length;
+            const nextFacts = facts.slice(currentFactCount, currentFactCount + 10);
+
+            nextFacts.forEach(fact => {
+                const factItem = document.createElement('li');
+                factItem.textContent = fact.trim();
+                factList.appendChild(factItem);
+            });
+
+            if (factList.children.length >= facts.length) {
+                loadMoreBtn.classList.add('hidden');
+            }
+        }
+
+        function getNearbyPlaces(location) {
             const service = new google.maps.places.PlacesService(document.createElement('div'));
             const request = {
-                location: new google.maps.LatLng(latLng.latitude, latLng.longitude),
-                radius: 5000,
-                type: ['tourist_attraction']
+                location: location,
+                radius: '500',
+                type: ['point_of_interest']
             };
 
             service.nearbySearch(request, (results, status) => {
                 if (status === google.maps.places.PlacesServiceStatus.OK) {
-                    placesList.innerHTML = '';
-                    results.forEach(place => {
-                        const listItem = document.createElement('li');
-                        listItem.innerText = place.name;
-                        placesList.appendChild(listItem);
-                    });
-                } else {
-                    placesList.innerHTML = 'No nearby places found.';
+                    updateNearbyPlacesList(results);
                 }
             });
         }
+
+        function updateNearbyPlacesList(places) {
+            placesList.innerHTML = '';
+            places.slice(0, 5).forEach(place => {
+                const li = document.createElement('li');
+                li.textContent = place.name;
+                placesList.appendChild(li);
+            });
+        }
+
+        window.addEventListener('resize', adjustCarouselHeight);
     </script>
 </body>
 </html>
