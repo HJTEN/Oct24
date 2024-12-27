@@ -122,6 +122,23 @@
         .hidden {
             display: none;
         }
+        #start-exploring {
+            padding: 15px 30px;
+            font-size: 1.2em;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        #start-exploring:hover {
+            background-color: #45a049;
+        }
+        #home {
+            text-align: center;
+            padding: 2em;
+        }
     </style>
 </head>
 <body>
@@ -136,6 +153,7 @@
     <main id="main-content">
         <section id="home" class="active">
             <h2>Welcome to P.O.I. Explorer</h2>
+            <p>Start exploring landmarks around you and discover interesting facts!</p>
             <button id="start-exploring">Start Exploring</button>
         </section>
         <section id="explore" class="hidden">
@@ -155,7 +173,6 @@
             <ul id="places-list"></ul>
         </section>
     </main>
-
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4&libraries=places"></script>
     <script>
         // DOM elements
@@ -178,6 +195,7 @@
         // Carousel variables
         let facts = [];
         let currentFactIndex = 0;
+        let lastDetectedLandmark = null;
 
         // Navigation
         document.querySelectorAll('nav a').forEach(link => {
@@ -227,24 +245,31 @@
                 const imageData = canvas.toDataURL('image/jpeg', 0.8);
                 const base64Image = imageData.split(',')[1];
 
-                const response = await fetch(VISION_API_ENDPOINT, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        requests: [{
-                            image: { content: base64Image },
-                            features: [{ type: 'LANDMARK_DETECTION', maxResults: 1 }]
-                        }]
-                    })
-                });
+                try {
+                    const response = await fetch(VISION_API_ENDPOINT, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            requests: [{
+                                image: { content: base64Image },
+                                features: [{ type: 'LANDMARK_DETECTION', maxResults: 1 }]
+                            }]
+                        })
+                    });
 
-                const data = await response.json();
-                if (data.responses[0].landmarkAnnotations) {
-                    const landmark = data.responses[0].landmarkAnnotations[0];
-                    updateLandmarkInfo(landmark.description);
-                    getNearbyPlaces(landmark.locations[0].latLng);
+                    const data = await response.json();
+                    if (data.responses[0].landmarkAnnotations) {
+                        const landmark = data.responses[0].landmarkAnnotations[0];
+                        if (lastDetectedLandmark !== landmark.description) {
+                            lastDetectedLandmark = landmark.description;
+                            updateLandmarkInfo(landmark.description);
+                            getNearbyPlaces(landmark.locations[0].latLng);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error detecting landmarks:', error);
                 }
 
                 requestAnimationFrame(processFrame);
@@ -357,3 +382,4 @@
     </script>
 </body>
 </html>
+
