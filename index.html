@@ -53,45 +53,14 @@
             width: 100%;
             max-width: 640px;
         }
-        #fact-carousel {
-            position: relative;
-            width: 100%;
-            max-width: 640px;
-            height: auto;
-            min-height: 100px;
-            overflow: hidden;
+        #fact-list {
+            list-style-type: disc;
+            padding-left: 20px;
             margin-top: 1em;
+            text-align: left;
         }
-        #fact-container {
-            display: flex;
-            transition: transform 0.3s ease;
-        }
-        .fact {
-            flex: 0 0 100%;
-            padding: 10px;
-            box-sizing: border-box;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            min-height: 100px;
-        }
-        #prev-fact, #next-fact {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            background: rgba(0, 0, 0, 0.5);
-            color: white;
-            border: none;
-            padding: 10px;
-            cursor: pointer;
-            z-index: 10;
-        }
-        #prev-fact {
-            left: 0;
-        }
-        #next-fact {
-            right: 0;
+        #fact-list li {
+            margin-bottom: 0.5em;
         }
         #nearby-places {
             margin-top: 1em;
@@ -135,11 +104,7 @@
             <canvas id="canvas" style="display:none;"></canvas>
             <div id="landmark-info">
                 <h2>Landmark Name</h2>
-                <div id="fact-carousel">
-                    <div id="fact-container"></div>
-                    <button id="prev-fact">&#10094;</button>
-                    <button id="next-fact">&#10095;</button>
-                </div>
+                <ul id="fact-list"></ul>
             </div>
         </section>
         <section id="nearby" class="hidden">
@@ -159,9 +124,7 @@
         const cameraFeed = document.getElementById('camera-feed');
         const canvas = document.getElementById('canvas');
         const landmarkInfo = document.getElementById('landmark-info');
-        const factContainer = document.getElementById('fact-container');
-        const prevFactBtn = document.getElementById('prev-fact');
-        const nextFactBtn = document.getElementById('next-fact');
+        const factList = document.getElementById('fact-list');
         const placesList = document.getElementById('places-list');
 
         // Your API keys
@@ -171,10 +134,6 @@
         // Endpoints
         const VISION_API_ENDPOINT = `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`;
         const GEMINI_API_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-
-        // Carousel variables
-        let facts = [];
-        let currentFactIndex = 0;
 
         // Navigation
         document.querySelectorAll('nav a').forEach(link => {
@@ -252,8 +211,8 @@
 
         async function updateLandmarkInfo(landmarkName) {
             landmarkInfo.querySelector('h2').textContent = landmarkName;
-            facts = await getGeminiFacts(landmarkName);
-            updateFactCarousel();
+            const facts = await getGeminiFacts(landmarkName);
+            displayFacts(facts);
         }
 
         async function getGeminiFacts(landmarkName) {
@@ -273,7 +232,6 @@
                 });
 
                 const data = await response.json();
-                
                 const generatedText = data.candidates[0].content.parts[0].text;
                 const facts = generatedText.split(/(?<=\.|\?|\!)\s+/).filter(fact => fact.trim().length > 0);
                 return facts.length > 0 ? facts : ['No information available.'];
@@ -283,25 +241,14 @@
             }
         }
 
-        function updateFactCarousel() {
-            factContainer.innerHTML = '';
+        function displayFacts(facts) {
+            factList.innerHTML = '';
             facts.forEach(fact => {
-                const factElement = document.createElement('div');
-                factElement.classList.add('fact');
-                factElement.innerText = fact;
-                factContainer.appendChild(factElement);
+                const factItem = document.createElement('li');
+                factItem.textContent = fact;
+                factList.appendChild(factItem);
             });
         }
-
-        prevFactBtn.addEventListener('click', () => {
-            currentFactIndex = (currentFactIndex - 1 + facts.length) % facts.length;
-            updateFactCarousel();
-        });
-
-        nextFactBtn.addEventListener('click', () => {
-            currentFactIndex = (currentFactIndex + 1) % facts.length;
-            updateFactCarousel();
-        });
 
         async function getNearbyPlaces(latLng) {
             const service = new google.maps.places.PlacesService(document.createElement('div'));
