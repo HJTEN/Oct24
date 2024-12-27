@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>P.O.I. Explorer</title>
-    <script src="https://ai.google.dev/api/js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -13,7 +12,7 @@
             display: flex;
             flex-direction: column;
             min-height: 100vh;
-            overflow: hidden;
+            overflow: hidden; /* Prevent scrolling that can affect zoom */
         }
         header {
             background-color: #4CAF50;
@@ -37,9 +36,9 @@
             flex-direction: column;
             align-items: center;
             padding: 1em;
-            overflow-y: auto;
-            width: 100%;
-            box-sizing: border-box;
+            overflow-y: auto; /* Allow scrolling within the main content */
+            width: 100%; /* Ensure it uses full width */
+            box-sizing: border-box; /* Include padding in width */
         }
         #camera-feed {
             width: 100%;
@@ -75,14 +74,6 @@
             justify-content: center;
             text-align: center;
             min-height: 100px;
-        }
-        .fact.loading {
-            animation: pulse 1.5s infinite;
-        }
-        @keyframes pulse {
-            0% { opacity: 0.6; }
-            50% { opacity: 1; }
-            100% { opacity: 0.6; }
         }
         #prev-fact, #next-fact {
             position: absolute;
@@ -122,23 +113,6 @@
         .hidden {
             display: none;
         }
-        #start-exploring {
-            padding: 15px 30px;
-            font-size: 1.2em;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-top: 20px;
-        }
-        #start-exploring:hover {
-            background-color: #45a049;
-        }
-        #home {
-            text-align: center;
-            padding: 2em;
-        }
     </style>
 </head>
 <body>
@@ -153,7 +127,6 @@
     <main id="main-content">
         <section id="home" class="active">
             <h2>Welcome to P.O.I. Explorer</h2>
-            <p>Start exploring landmarks around you and discover interesting facts!</p>
             <button id="start-exploring">Start Exploring</button>
         </section>
         <section id="explore" class="hidden">
@@ -173,6 +146,7 @@
             <ul id="places-list"></ul>
         </section>
     </main>
+
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4&libraries=places"></script>
     <script>
         // DOM elements
@@ -189,13 +163,11 @@
         // API keys and endpoints
         const GOOGLE_API_KEY = 'AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4';
         const VISION_API_ENDPOINT = `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`;
-        const GEMINI_API_KEY = 'AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4'; // Replace with your Gemini API key
-        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+        const WIKIPEDIA_API_ENDPOINT = 'https://en.wikipedia.org/w/api.php';
 
         // Carousel variables
         let facts = [];
         let currentFactIndex = 0;
-        let lastDetectedLandmark = null;
 
         // Navigation
         document.querySelectorAll('nav a').forEach(link => {
@@ -213,11 +185,13 @@
             document.getElementById(sectionId).classList.remove('hidden');
         }
 
+        // Start exploring
         startExploringBtn.addEventListener('click', () => {
             showSection('explore');
             startCamera();
         });
 
+        // Camera functionality
         async function startCamera() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
@@ -235,6 +209,7 @@
             }
         }
 
+        // Landmark detection using Google Vision API
         async function detectLandmarks() {
             const ctx = canvas.getContext('2d');
             canvas.width = cameraFeed.videoWidth;
@@ -245,31 +220,24 @@
                 const imageData = canvas.toDataURL('image/jpeg', 0.8);
                 const base64Image = imageData.split(',')[1];
 
-                try {
-                    const response = await fetch(VISION_API_ENDPOINT, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            requests: [{
-                                image: { content: base64Image },
-                                features: [{ type: 'LANDMARK_DETECTION', maxResults: 1 }]
-                            }]
-                        })
-                    });
+                const response = await fetch(VISION_API_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        requests: [{
+                            image: { content: base64Image },
+                            features: [{ type: 'LANDMARK_DETECTION', maxResults: 1 }]
+                        }]
+                    })
+                });
 
-                    const data = await response.json();
-                    if (data.responses[0].landmarkAnnotations) {
-                        const landmark = data.responses[0].landmarkAnnotations[0];
-                        if (lastDetectedLandmark !== landmark.description) {
-                            lastDetectedLandmark = landmark.description;
-                            updateLandmarkInfo(landmark.description);
-                            getNearbyPlaces(landmark.locations[0].latLng);
-                        }
-                    }
-                } catch (error) {
-                    console.error('Error detecting landmarks:', error);
+                const data = await response.json();
+                if (data.responses[0].landmarkAnnotations) {
+                    const landmark = data.responses[0].landmarkAnnotations[0];
+                    updateLandmarkInfo(landmark.description);
+                    getNearbyPlaces(landmark.locations[0].latLng);
                 }
 
                 requestAnimationFrame(processFrame);
@@ -280,40 +248,28 @@
 
         async function updateLandmarkInfo(landmarkName) {
             landmarkInfo.querySelector('h2').textContent = landmarkName;
-            
-            // Add loading indicator
-            factContainer.innerHTML = '<div class="fact loading">Loading facts...</div>';
-            
-            facts = await getLandmarkFacts(landmarkName);
+            facts = await getWikipediaFacts(landmarkName);
             updateFactCarousel();
         }
 
-        async function getLandmarkFacts(landmarkName) {
-            try {
-                const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-                
-                const prompt = `Generate 5 interesting and concise facts about ${landmarkName}. 
-                Each fact should be a single sentence. Focus on historical significance, 
-                architecture, and unique features. Return only the facts, separated by periods.`;
+        async function getWikipediaFacts(title) {
+            const params = new URLSearchParams({
+                action: 'query',
+                format: 'json',
+                titles: title,
+                prop: 'extracts',
+                exintro: true,
+                explaintext: true,
+                origin: '*'
+            });
 
-                const result = await model.generateContent(prompt);
-                const response = await result.response;
-                const text = response.text();
-                
-                // Split the response into individual facts
-                const facts = text.split('.').filter(fact => fact.trim().length > 0);
-                
-                // If no facts were generated, return a default message
-                if (facts.length === 0) {
-                    return ['No information available for this landmark.'];
-                }
-                
-                return facts;
-
-            } catch (error) {
-                console.error('Error generating facts:', error);
-                return ['Unable to generate facts at this time.'];
-            }
+            const response = await fetch(`${WIKIPEDIA_API_ENDPOINT}?${params}`);
+            const data = await response.json();
+            const pages = data.query.pages;
+            const pageId = Object.keys(pages)[0];
+            const fullText = pages[pageId].extract || 'No description available.';
+            
+            return fullText.split(/(?<=\.|\?|\!)\s+/);
         }
 
         function updateFactCarousel() {
@@ -378,8 +334,8 @@
             });
         }
 
+        // Adjust carousel height on window resize
         window.addEventListener('resize', adjustCarouselHeight);
     </script>
 </body>
 </html>
-
