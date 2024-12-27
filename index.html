@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>P.O.I. Explorer</title>
     <style>
-        /* Same CSS as before for styling */
+        /* Same CSS as before */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -93,27 +93,6 @@
         #next-fact {
             right: 0;
         }
-        #nearby-places {
-            margin-top: 1em;
-            width: 100%;
-            max-width: 640px;
-        }
-        #nearby-places h2 {
-            text-align: center;
-        }
-        #places-list {
-            list-style-type: none;
-            padding: 0;
-        }
-        #places-list li {
-            background-color: #f1f1f1;
-            margin: 0.5em 0;
-            padding: 0.5em;
-            border-radius: 5px;
-        }
-        .hidden {
-            display: none;
-        }
     </style>
 </head>
 <body>
@@ -123,7 +102,6 @@
     <nav>
         <a href="#home">Home</a>
         <a href="#explore">Explore</a>
-        <a href="#nearby">Nearby Places</a>
     </nav>
     <main id="main-content">
         <section id="home" class="active">
@@ -134,7 +112,7 @@
             <video id="camera-feed" autoplay playsinline></video>
             <canvas id="canvas" style="display:none;"></canvas>
             <div id="landmark-info">
-                <h2>Landmark Name</h2>
+                <h2 id="landmark-name">Landmark Name</h2>
                 <div id="fact-carousel">
                     <div id="fact-container"></div>
                     <button id="prev-fact">&#10094;</button>
@@ -142,22 +120,16 @@
                 </div>
             </div>
         </section>
-        <section id="nearby" class="hidden">
-            <h2>Nearby Places</h2>
-            <ul id="places-list"></ul>
-        </section>
     </main>
 
     <script>
-        const mainContent = document.getElementById('main-content');
         const startExploringBtn = document.getElementById('start-exploring');
         const cameraFeed = document.getElementById('camera-feed');
         const canvas = document.getElementById('canvas');
-        const landmarkInfo = document.getElementById('landmark-info');
+        const landmarkNameElem = document.getElementById('landmark-name');
         const factContainer = document.getElementById('fact-container');
         const prevFactBtn = document.getElementById('prev-fact');
         const nextFactBtn = document.getElementById('next-fact');
-        const placesList = document.getElementById('places-list');
 
         const GOOGLE_VISION_API_KEY = "AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4"; // Replace with Vision API key
         const GOOGLE_VISION_ENDPOINT = "https://vision.googleapis.com/v1/images:annotate";
@@ -168,12 +140,9 @@
         let facts = [];
         let currentFactIndex = 0;
 
-        document.querySelectorAll('nav a').forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const targetId = e.target.getAttribute('href').slice(1);
-                showSection(targetId);
-            });
+        startExploringBtn.addEventListener('click', () => {
+            showSection('explore');
+            startCamera();
         });
 
         function showSection(sectionId) {
@@ -183,19 +152,10 @@
             document.getElementById(sectionId).classList.remove('hidden');
         }
 
-        startExploringBtn.addEventListener('click', () => {
-            showSection('explore');
-            startCamera();
-        });
-
         async function startCamera() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        facingMode: 'environment',
-                        width: { ideal: 1920 },
-                        height: { ideal: 1080 }
-                    }
+                    video: { facingMode: 'environment' }
                 });
                 cameraFeed.srcObject = stream;
                 await cameraFeed.play();
@@ -218,9 +178,11 @@
             const landmarkName = await getLandmarkNameFromVision(base64Image);
 
             if (landmarkName) {
+                landmarkNameElem.textContent = landmarkName;
                 facts = await getLandmarkFactsFromGemini(landmarkName);
                 updateFactCarousel();
             } else {
+                landmarkNameElem.textContent = "Landmark not detected";
                 facts = ["• Unable to detect landmark. Please try again."];
                 updateFactCarousel();
             }
@@ -253,7 +215,7 @@
         }
 
         async function getLandmarkFactsFromGemini(landmarkName) {
-            const payload = { prompt: [`Tell me about ${landmarkName}`] };
+            const payload = { prompt: [`Tell me interesting facts about ${landmarkName}.`] };
 
             try {
                 const response = await fetch(GOOGLE_GEMINI_ENDPOINT, {
@@ -265,16 +227,12 @@
                     body: JSON.stringify(payload)
                 });
 
-                if (!response.ok) {
-                    throw new Error(`Gemini API returned an error: ${response.statusText}`);
-                }
-
                 const data = await response.json();
                 const content = data.candidates[0]?.content || "No facts available.";
                 return content.split(/\.\s+/).map(fact => `• ${fact.trim()}`);
             } catch (error) {
                 console.error("Error fetching facts from Google Gemini:", error);
-                return ["• Unable to fetch facts at the moment. Please try again later."];
+                return ["• Unable to fetch facts. Please try again later."];
             }
         }
 
