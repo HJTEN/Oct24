@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>P.O.I. Explorer</title>
     <style>
+        /* Same CSS as before for styling */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -158,8 +159,11 @@
         const nextFactBtn = document.getElementById('next-fact');
         const placesList = document.getElementById('places-list');
 
+        const GOOGLE_VISION_API_KEY = "AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4"; // Replace with Vision API key
+        const GOOGLE_VISION_ENDPOINT = "https://vision.googleapis.com/v1/images:annotate";
+
         const GOOGLE_GEMINI_ENDPOINT = "https://us-central1-aiplatform.googleapis.com/v1/projects/modern-vortex-410710/locations/us-central1/publishers/google/models/gemini-1.5-flash:generateContent";
-        const API_KEY = "AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4"; // Replace with your actual API key
+        const GOOGLE_GEMINI_API_KEY = "AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4"; // Replace with Gemini API key
 
         let facts = [];
         let currentFactIndex = 0;
@@ -209,20 +213,56 @@
             return canvas.toDataURL('image/jpeg', 0.8);
         }
 
-        async function getLandmarkFactsFromGeminiWithImage(base64Image) {
+        async function detectLandmarks() {
+            const base64Image = await captureImage();
+            const landmarkName = await getLandmarkNameFromVision(base64Image);
+
+            if (landmarkName) {
+                facts = await getLandmarkFactsFromGemini(landmarkName);
+                updateFactCarousel();
+            } else {
+                facts = ["• Unable to detect landmark. Please try again."];
+                updateFactCarousel();
+            }
+        }
+
+        async function getLandmarkNameFromVision(base64Image) {
             const payload = {
-                prompt: ["Tell me about this landmark"],
-                image: { base64: base64Image },
+                requests: [
+                    {
+                        image: { content: base64Image.split(",")[1] },
+                        features: [{ type: "LANDMARK_DETECTION", maxResults: 1 }]
+                    }
+                ]
             };
+
+            try {
+                const response = await fetch(`${GOOGLE_VISION_ENDPOINT}?key=${GOOGLE_VISION_API_KEY}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+                const landmark = data.responses?.[0]?.landmarkAnnotations?.[0]?.description;
+                return landmark || null;
+            } catch (error) {
+                console.error("Error detecting landmarks:", error);
+                return null;
+            }
+        }
+
+        async function getLandmarkFactsFromGemini(landmarkName) {
+            const payload = { prompt: [`Tell me about ${landmarkName}`] };
 
             try {
                 const response = await fetch(GOOGLE_GEMINI_ENDPOINT, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "Authorization": `Bearer ${API_KEY}`,
+                        "Authorization": `Bearer ${GOOGLE_GEMINI_API_KEY}`
                     },
-                    body: JSON.stringify(payload),
+                    body: JSON.stringify(payload)
                 });
 
                 if (!response.ok) {
@@ -230,18 +270,12 @@
                 }
 
                 const data = await response.json();
-                const content = data.candidates[0].content || "No facts available.";
+                const content = data.candidates[0]?.content || "No facts available.";
                 return content.split(/\.\s+/).map(fact => `• ${fact.trim()}`);
             } catch (error) {
                 console.error("Error fetching facts from Google Gemini:", error);
                 return ["• Unable to fetch facts at the moment. Please try again later."];
             }
-        }
-
-        async function detectLandmarks() {
-            const base64Image = await captureImage();
-            facts = await getLandmarkFactsFromGeminiWithImage(base64Image);
-            updateFactCarousel();
         }
 
         function updateFactCarousel() {
