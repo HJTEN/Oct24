@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>P.O.I. Explorer</title>
+    <script src="https://ai.google.dev/api/js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -12,7 +13,7 @@
             display: flex;
             flex-direction: column;
             min-height: 100vh;
-            overflow: hidden; /* Prevent scrolling that can affect zoom */
+            overflow: hidden;
         }
         header {
             background-color: #4CAF50;
@@ -36,9 +37,9 @@
             flex-direction: column;
             align-items: center;
             padding: 1em;
-            overflow-y: auto; /* Allow scrolling within the main content */
-            width: 100%; /* Ensure it uses full width */
-            box-sizing: border-box; /* Include padding in width */
+            overflow-y: auto;
+            width: 100%;
+            box-sizing: border-box;
         }
         #camera-feed {
             width: 100%;
@@ -74,6 +75,14 @@
             justify-content: center;
             text-align: center;
             min-height: 100px;
+        }
+        .fact.loading {
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
         }
         #prev-fact, #next-fact {
             position: absolute;
@@ -163,7 +172,8 @@
         // API keys and endpoints
         const GOOGLE_API_KEY = 'AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4';
         const VISION_API_ENDPOINT = `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`;
-        const WIKIPEDIA_API_ENDPOINT = 'https://en.wikipedia.org/w/api.php';
+        const GEMINI_API_KEY = 'AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4'; // Replace with your Gemini API key
+        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
         // Carousel variables
         let facts = [];
@@ -185,13 +195,11 @@
             document.getElementById(sectionId).classList.remove('hidden');
         }
 
-        // Start exploring
         startExploringBtn.addEventListener('click', () => {
             showSection('explore');
             startCamera();
         });
 
-        // Camera functionality
         async function startCamera() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
@@ -209,7 +217,6 @@
             }
         }
 
-        // Landmark detection using Google Vision API
         async function detectLandmarks() {
             const ctx = canvas.getContext('2d');
             canvas.width = cameraFeed.videoWidth;
@@ -248,28 +255,40 @@
 
         async function updateLandmarkInfo(landmarkName) {
             landmarkInfo.querySelector('h2').textContent = landmarkName;
-            facts = await getWikipediaFacts(landmarkName);
+            
+            // Add loading indicator
+            factContainer.innerHTML = '<div class="fact loading">Loading facts...</div>';
+            
+            facts = await getLandmarkFacts(landmarkName);
             updateFactCarousel();
         }
 
-        async function getWikipediaFacts(title) {
-            const params = new URLSearchParams({
-                action: 'query',
-                format: 'json',
-                titles: title,
-                prop: 'extracts',
-                exintro: true,
-                explaintext: true,
-                origin: '*'
-            });
+        async function getLandmarkFacts(landmarkName) {
+            try {
+                const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+                
+                const prompt = `Generate 5 interesting and concise facts about ${landmarkName}. 
+                Each fact should be a single sentence. Focus on historical significance, 
+                architecture, and unique features. Return only the facts, separated by periods.`;
 
-            const response = await fetch(`${WIKIPEDIA_API_ENDPOINT}?${params}`);
-            const data = await response.json();
-            const pages = data.query.pages;
-            const pageId = Object.keys(pages)[0];
-            const fullText = pages[pageId].extract || 'No description available.';
-            
-            return fullText.split(/(?<=\.|\?|\!)\s+/);
+                const result = await model.generateContent(prompt);
+                const response = await result.response;
+                const text = response.text();
+                
+                // Split the response into individual facts
+                const facts = text.split('.').filter(fact => fact.trim().length > 0);
+                
+                // If no facts were generated, return a default message
+                if (facts.length === 0) {
+                    return ['No information available for this landmark.'];
+                }
+                
+                return facts;
+
+            } catch (error) {
+                console.error('Error generating facts:', error);
+                return ['Unable to generate facts at this time.'];
+            }
         }
 
         function updateFactCarousel() {
@@ -334,7 +353,6 @@
             });
         }
 
-        // Adjust carousel height on window resize
         window.addEventListener('resize', adjustCarouselHeight);
     </script>
 </body>
