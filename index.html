@@ -252,13 +252,11 @@
             updateFactCarousel();
         }
 
-        // Updated getWikipediaFacts function to handle URL encoding and redirects
         async function getWikipediaFacts(title) {
-            const encodedTitle = encodeURIComponent(title);  // Ensure the title is URL-safe
             const params = new URLSearchParams({
                 action: 'query',
                 format: 'json',
-                titles: encodedTitle,  // Use the encoded title in the API request
+                titles: title,
                 prop: 'extracts',
                 exintro: true,
                 explaintext: true,
@@ -267,41 +265,11 @@
 
             const response = await fetch(`${WIKIPEDIA_API_ENDPOINT}?${params}`);
             const data = await response.json();
-            
-            // Extract the first page and handle the possibility of redirects or no result
             const pages = data.query.pages;
             const pageId = Object.keys(pages)[0];
-            
-            // If no valid page is found, try an alternative approach like checking for redirects
-            if (pageId === "-1") {
-                console.warn("Landmark not found on Wikipedia, trying with a redirect search.");
-                const redirectParams = new URLSearchParams({
-                    action: 'query',
-                    format: 'json',
-                    titles: encodedTitle,
-                    prop: 'info',
-                    inprop: 'url',
-                    origin: '*'
-                });
-
-                const redirectResponse = await fetch(`${WIKIPEDIA_API_ENDPOINT}?${redirectParams}`);
-                const redirectData = await redirectResponse.json();
-                const redirectPages = redirectData.query.pages;
-                const redirectPageId = Object.keys(redirectPages)[0];
-
-                if (redirectPageId !== "-1") {
-                    // If a valid redirect page exists, extract its title and fetch facts again
-                    const redirectedTitle = redirectPages[redirectPageId].title;
-                    return await getWikipediaFacts(redirectedTitle);  // Recursively call with the redirected title
-                } else {
-                    return ['No description available or no Wikipedia page found.'];
-                }
-            }
-
             const fullText = pages[pageId].extract || 'No description available.';
             
-            // Split the description into sentences, and format them into a bullet-point list
-            return fullText.split(/(?<=\.|\?|\!)\s+/).map(sentence => `• ${sentence.trim()}`);
+            return fullText.split(/(?<=\.|\?|\!)\s+/);
         }
 
         function updateFactCarousel() {
@@ -309,14 +277,7 @@
             facts.forEach((fact, index) => {
                 const factElement = document.createElement('div');
                 factElement.classList.add('fact');
-                
-                // Make sure that each fact is displayed in a separate bullet point
-                const factList = document.createElement('ul');
-                const factItem = document.createElement('li');
-                factItem.textContent = fact;
-                factList.appendChild(factItem);
-                factElement.appendChild(factList);
-                
+                factElement.textContent = fact.trim();
                 factContainer.appendChild(factElement);
             });
             showFact(0);
