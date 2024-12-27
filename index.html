@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>P.O.I. Explorer</title>
     <style>
-        /* Styles remain unchanged */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -13,7 +12,7 @@
             display: flex;
             flex-direction: column;
             min-height: 100vh;
-            overflow: hidden;
+            background-color: #f8f8f8;
         }
         header {
             background-color: #4CAF50;
@@ -37,9 +36,6 @@
             flex-direction: column;
             align-items: center;
             padding: 1em;
-            overflow-y: auto;
-            width: 100%;
-            box-sizing: border-box;
         }
         #camera-feed {
             width: 100%;
@@ -58,6 +54,8 @@
             padding-left: 20px;
             margin-top: 1em;
             text-align: left;
+            font-size: 16px;
+            line-height: 1.5;
         }
         #fact-list li {
             margin-bottom: 0.5em;
@@ -66,9 +64,6 @@
             margin-top: 1em;
             width: 100%;
             max-width: 640px;
-        }
-        #nearby-places h2 {
-            text-align: center;
         }
         #places-list {
             list-style-type: none;
@@ -103,7 +98,7 @@
             <video id="camera-feed" autoplay playsinline></video>
             <canvas id="canvas" style="display:none;"></canvas>
             <div id="landmark-info">
-                <h2>Landmark Name</h2>
+                <h2 id="landmark-name">Landmark Name</h2>
                 <ul id="fact-list"></ul>
             </div>
         </section>
@@ -113,10 +108,8 @@
         </section>
     </main>
 
-    <!-- Add Google Maps JavaScript API -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4&libraries=places"></script>
 
-    <!-- Gemini API Request -->
     <script>
         // DOM elements
         const mainContent = document.getElementById('main-content');
@@ -126,6 +119,7 @@
         const landmarkInfo = document.getElementById('landmark-info');
         const factList = document.getElementById('fact-list');
         const placesList = document.getElementById('places-list');
+        const landmarkName = document.getElementById('landmark-name');
 
         // Your API keys
         const GOOGLE_API_KEY = 'AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4'; // Vision & Places API key
@@ -217,7 +211,7 @@
 
         async function getGeminiFacts(landmarkName) {
             const prompt = `Give me 5 interesting facts about ${landmarkName}. Present each fact as a complete sentence. Focus on historical significance, architectural details, and cultural importance.`;
-    
+
             try {
                 const response = await fetch(GEMINI_API_ENDPOINT, {
                     method: 'POST',
