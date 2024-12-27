@@ -12,13 +12,14 @@
             display: flex;
             flex-direction: column;
             min-height: 100vh;
-            overflow: hidden;
+            background-color: #f7f7f7;
         }
         header {
             background-color: #4CAF50;
             color: white;
             text-align: center;
             padding: 1em;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
         nav {
             display: flex;
@@ -29,6 +30,10 @@
         nav a {
             color: white;
             text-decoration: none;
+            font-size: 16px;
+        }
+        nav a:hover {
+            text-decoration: underline;
         }
         main {
             flex: 1;
@@ -37,48 +42,75 @@
             align-items: center;
             padding: 1em;
             overflow-y: auto;
-            width: 100%;
-            box-sizing: border-box;
         }
         #camera-feed {
             width: 100%;
             max-width: 640px;
             height: auto;
             border: 1px solid #ddd;
+            margin-bottom: 1em;
         }
         #landmark-info {
             margin-top: 1em;
-            text-align: center;
             width: 100%;
             max-width: 640px;
+            padding: 1em;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        h2 {
+            font-size: 1.5em;
+            margin-bottom: 0.5em;
+            color: #333;
         }
         #fact-list {
-            margin-top: 1em;
             list-style-type: none;
             padding: 0;
-            width: 100%;
-            max-width: 640px;
+            margin: 0;
         }
         #fact-list li {
-            background-color: #f1f1f1;
+            background-color: #f9f9f9;
             margin: 0.5em 0;
-            padding: 0.5em;
-            border-radius: 5px;
+            padding: 1em;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+        .fact-item {
+            margin-bottom: 10px;
+        }
+        .fact-item span {
+            font-weight: bold;
+            color: #4CAF50;
         }
         #load-more-btn {
             background-color: #4CAF50;
             color: white;
             border: none;
-            padding: 10px;
+            padding: 10px 20px;
             cursor: pointer;
             margin-top: 1em;
-            font-size: 1em;
+            font-size: 1.1em;
+            border-radius: 5px;
         }
         #load-more-btn:hover {
             background-color: #45a049;
         }
         .hidden {
             display: none;
+        }
+        @media (max-width: 600px) {
+            #landmark-info {
+                padding: 0.8em;
+            }
+            h2 {
+                font-size: 1.2em;
+            }
+            #fact-list li {
+                font-size: 1em;
+            }
         }
     </style>
 </head>
@@ -301,8 +333,6 @@
                 placesList.appendChild(li);
             });
         }
-
-        window.addEventListener('resize', adjustCarouselHeight);
     </script>
 </body>
 </html>
