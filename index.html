@@ -5,55 +5,42 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>P.O.I. Explorer</title>
     <style>
-        /* Global Styles */
+        /* Updated Styling */
         body {
-            font-family: 'Roboto', Arial, sans-serif;
+            font-family: 'Arial', sans-serif;
             margin: 0;
             padding: 0;
             display: flex;
             flex-direction: column;
             min-height: 100vh;
-            background-color: #f9fafc;
+            background-color: #f7f7f7;
         }
 
-        /* Header */
         header {
-            background: linear-gradient(90deg, #43cea2, #185a9d);
+            background-color: #4CAF50;
             color: white;
             text-align: center;
             padding: 1em;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            position: sticky;
-            top: 0;
-            z-index: 10;
         }
 
-        header h1 {
-            margin: 0;
-            font-size: 1.8em;
-        }
-
-        /* Navigation Bar */
         nav {
             display: flex;
             justify-content: space-around;
             background-color: #333;
-            padding: 0.8em 0;
+            padding: 0.5em;
         }
 
         nav a {
             color: white;
             text-decoration: none;
             font-size: 16px;
-            display: flex;
-            align-items: center;
         }
 
         nav a:hover {
             text-decoration: underline;
         }
 
-        /* Main Content */
         main {
             flex: 1;
             display: flex;
@@ -67,10 +54,8 @@
             width: 100%;
             max-width: 640px;
             height: auto;
-            border: 2px solid #ddd;
-            border-radius: 12px;
+            border: 1px solid #ddd;
             margin-bottom: 1em;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
 
         #landmark-info {
@@ -79,12 +64,12 @@
             max-width: 640px;
             padding: 1em;
             background-color: #fff;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            border-radius: 12px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
         }
 
-        #landmark-info h2 {
-            font-size: 1.6em;
+        h2 {
+            font-size: 1.5em;
             margin-bottom: 0.5em;
             color: #333;
         }
@@ -96,40 +81,41 @@
         }
 
         #fact-list li {
-            background-color: #f4f4f4;
+            background-color: #f9f9f9;
             margin: 0.5em 0;
             padding: 1em;
             border-radius: 8px;
             border: 1px solid #ddd;
             font-size: 1.1em;
             line-height: 1.6;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
         #load-more-btn {
-            background: linear-gradient(90deg, #43cea2, #185a9d);
+            background-color: #4CAF50;
             color: white;
             border: none;
-            padding: 12px 24px;
+            padding: 10px 20px;
             cursor: pointer;
             margin-top: 1em;
             font-size: 1.1em;
-            border-radius: 8px;
-            transition: transform 0.2s, background-color 0.3s;
+            border-radius: 5px;
         }
 
         #load-more-btn:hover {
-            transform: scale(1.05);
+            background-color: #45a049;
         }
 
-        /* Mobile Responsive Design */
+        .hidden {
+            display: none;
+        }
+
         @media (max-width: 600px) {
             #landmark-info {
                 padding: 0.8em;
             }
 
-            #landmark-info h2 {
-                font-size: 1.3em;
+            h2 {
+                font-size: 1.2em;
             }
 
             #fact-list li {
@@ -150,11 +136,11 @@
     <main id="main-content">
         <section id="home" class="active">
             <h2>Welcome to P.O.I. Explorer</h2>
-            <button id="start-exploring" style="padding: 10px 20px; background: #43cea2; color: white; border: none; border-radius: 8px;">Start Exploring</button>
+            <button id="start-exploring">Start Exploring</button>
         </section>
         <section id="explore" class="hidden">
             <video id="camera-feed" autoplay playsinline></video>
-            <canvas id="canvas" style="display: none;"></canvas>
+            <canvas id="canvas" style="display:none;"></canvas>
             <div id="landmark-info">
                 <h2>Landmark Name</h2>
                 <ul id="fact-list"></ul>
@@ -168,7 +154,7 @@
     </main>
 
     <script>
-        // DOM elements
+        // DOM Elements
         const mainContent = document.getElementById('main-content');
         const startExploringBtn = document.getElementById('start-exploring');
         const cameraFeed = document.getElementById('camera-feed');
@@ -178,13 +164,16 @@
         const loadMoreBtn = document.getElementById('load-more-btn');
         const placesList = document.getElementById('places-list');
 
-        // API keys and endpoints
+        // API Keys
         const GOOGLE_API_KEY = 'AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4';
         const VISION_API_ENDPOINT = `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`;
         const GEMINI_API_KEY = 'AIzaSyA2w8Bu0fMKH2_NUnssYF5HnmgnP101R8I';
-        const GEMINI_API_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`;
+        const GEMINI_API_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
-        // Navigation
+        let facts = [];
+        let currentFactIndex = 0;
+
+        // Navigation Logic
         document.querySelectorAll('nav a').forEach(link => {
             link.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -205,14 +194,11 @@
             startCamera();
         });
 
+        // Camera Initialization
         async function startCamera() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        facingMode: 'environment',
-                        width: { ideal: 1920 },
-                        height: { ideal: 1080 }
-                    }
+                    video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
                 });
                 cameraFeed.srcObject = stream;
                 await cameraFeed.play();
@@ -222,6 +208,7 @@
             }
         }
 
+        // Landmark Detection
         async function detectLandmarks() {
             const ctx = canvas.getContext('2d');
             canvas.width = cameraFeed.videoWidth;
@@ -234,9 +221,7 @@
 
                 const response = await fetch(VISION_API_ENDPOINT, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         requests: [{
                             image: { content: base64Image },
@@ -246,10 +231,9 @@
                 });
 
                 const data = await response.json();
-                if (data.responses[0].landmarkAnnotations) {
+                if (data.responses[0]?.landmarkAnnotations) {
                     const landmark = data.responses[0].landmarkAnnotations[0];
                     updateLandmarkInfo(landmark.description);
-                    getNearbyPlaces(landmark.locations[0].latLng);
                 }
 
                 requestAnimationFrame(processFrame);
@@ -258,30 +242,37 @@
             processFrame();
         }
 
+        // Landmark Information
         async function updateLandmarkInfo(landmarkName) {
             landmarkInfo.querySelector('h2').textContent = landmarkName;
             facts = await getGeminiFacts(landmarkName);
             displayFactList();
         }
 
+        // Gemini Facts Logic
         async function getGeminiFacts(landmarkName) {
-            const prompt = `Give me 5 interesting facts about ${landmarkName}. Present each fact as a complete sentence.`;
+            const prompt = `Give me 5 interesting facts about ${landmarkName}. Focus on historical significance and cultural importance.`;
+
             try {
                 const response = await fetch(GEMINI_API_ENDPOINT, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ prompt })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prompt,
+                        max_output_tokens: 150,
+                        temperature: 0.7
+                    })
                 });
+
                 const data = await response.json();
-                return data.responses || ['No facts found.'];
+                return data.candidates?.[0]?.output.split('\n').filter(Boolean) || [];
             } catch (error) {
                 console.error('Error fetching facts from Gemini:', error);
-                return ['Unable to fetch information about this landmark.'];
+                return ['Unable to fetch facts.'];
             }
         }
 
+        // Update Facts
         function displayFactList() {
             factList.innerHTML = '';
             facts.slice(0, 10).forEach(fact => {
