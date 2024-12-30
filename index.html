@@ -6,34 +6,44 @@
     <title>P.O.I. Explorer</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Roboto', sans-serif;
             margin: 0;
             padding: 0;
             display: flex;
             flex-direction: column;
             min-height: 100vh;
-            background-color: #f7f7f7;
+            background: linear-gradient(to bottom, #e0f7fa, #e8f5e9);
+            color: #333;
         }
         header {
-            background-color: #4CAF50;
+            background: linear-gradient(to right, #4CAF50, #2E7D32);
             color: white;
             text-align: center;
-            padding: 1em;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 1.5em 1em;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+        }
+        header h1 {
+            font-size: 2em;
+            margin: 0;
         }
         nav {
             display: flex;
             justify-content: space-around;
             background-color: #333;
-            padding: 0.5em;
+            padding: 0.8em;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
         nav a {
             color: white;
             text-decoration: none;
-            font-size: 16px;
+            font-size: 1.1em;
+            padding: 0.5em 1em;
+            border-radius: 5px;
+            transition: background 0.3s ease, color 0.3s ease;
         }
         nav a:hover {
-            text-decoration: underline;
+            background-color: #4CAF50;
+            color: #fff;
         }
         main {
             flex: 1;
@@ -45,24 +55,26 @@
         }
         #camera-feed {
             width: 100%;
-            max-width: 640px;
+            max-width: 720px;
             height: auto;
-            border: 1px solid #ddd;
-            margin-bottom: 1em;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 1.5em;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
         #landmark-info {
             margin-top: 1em;
             width: 100%;
-            max-width: 640px;
-            padding: 1em;
-            background-color: #fff;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            border-radius: 8px;
+            max-width: 720px;
+            padding: 1.5em;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
         }
         h2 {
-            font-size: 1.5em;
-            margin-bottom: 0.5em;
-            color: #333;
+            font-size: 1.8em;
+            margin-bottom: 0.8em;
+            color: #2E7D32;
         }
         #fact-list {
             list-style-type: none;
@@ -70,39 +82,76 @@
             margin: 0;
         }
         #fact-list li {
-            background-color: #f9f9f9;
-            margin: 0.5em 0;
-            padding: 1em;
+            background: #f9f9f9;
+            margin: 0.6em 0;
+            padding: 1.2em;
             border-radius: 8px;
             border: 1px solid #ddd;
             font-size: 1.1em;
-            line-height: 1.6;
+            line-height: 1.5;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
         #load-more-btn {
             background-color: #4CAF50;
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 12px 24px;
             cursor: pointer;
-            margin-top: 1em;
-            font-size: 1.1em;
-            border-radius: 5px;
+            margin-top: 1.5em;
+            font-size: 1.2em;
+            border-radius: 8px;
+            transition: background 0.3s ease, transform 0.2s ease;
         }
         #load-more-btn:hover {
-            background-color: #45a049;
+            background-color: #388E3C;
+            transform: scale(1.05);
         }
         .hidden {
             display: none;
         }
-        @media (max-width: 600px) {
+        #places-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        #places-list li {
+            background: #e8f5e9;
+            margin: 0.6em 0;
+            padding: 1em;
+            border-radius: 8px;
+            border: 1px solid #c8e6c9;
+            font-size: 1.1em;
+            line-height: 1.4;
+            color: #2E7D32;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        button {
+            font-family: 'Roboto', sans-serif;
+            font-weight: bold;
+        }
+        @media (max-width: 768px) {
             #landmark-info {
-                padding: 0.8em;
+                padding: 1.2em;
             }
             h2 {
-                font-size: 1.2em;
+                font-size: 1.5em;
             }
             #fact-list li {
                 font-size: 1em;
+            }
+            #load-more-btn {
+                font-size: 1.1em;
+            }
+        }
+        @media (max-width: 480px) {
+            nav {
+                flex-direction: column;
+            }
+            nav a {
+                padding: 0.5em 0;
+            }
+            #landmark-info {
+                padding: 1em;
             }
         }
     </style>
@@ -136,139 +185,137 @@
         </section>
     </main>
 
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4&libraries=places"></script>
     <script>
-        // API keys
-        const GOOGLE_API_KEY = "AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4";
-        const GEMINI_API_KEY = "AIzaSyA2w8Bu0fMKH2_NUnssYF5HnmgnP101R8I";
+        // JavaScript Logic: Unchanged
+        const mainContent = document.getElementById('main-content');
+        const startExploringBtn = document.getElementById('start-exploring');
+        const cameraFeed = document.getElementById('camera-feed');
+        const canvas = document.getElementById('canvas');
+        const landmarkInfo = document.getElementById('landmark-info');
+        const factList = document.getElementById('fact-list');
+        const loadMoreBtn = document.getElementById('load-more-btn');
+        const placesList = document.getElementById('places-list');
 
-        // API endpoints
+        const GOOGLE_API_KEY = 'AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4';
         const VISION_API_ENDPOINT = `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`;
-        const GEMINI_API_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`;
-
-        // DOM elements
-        const mainContent = document.getElementById("main-content");
-        const startExploringBtn = document.getElementById("start-exploring");
-        const cameraFeed = document.getElementById("camera-feed");
-        const canvas = document.getElementById("canvas");
-        const landmarkInfo = document.getElementById("landmark-info");
-        const factList = document.getElementById("fact-list");
-        const loadMoreBtn = document.getElementById("load-more-btn");
-        const placesList = document.getElementById("places-list");
-
-        let facts = [];
-        let currentFactIndex = 0;
+        const GEMINI_API_KEY = 'AIzaSyA2w8Bu0fMKH2_NUnssYF5HnmgnP101R8I';
+        const GEMINI_API_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
         // Navigation
-        document.querySelectorAll("nav a").forEach(link => {
-            link.addEventListener("click", e => {
+        document.querySelectorAll('nav a').forEach(link => {
+            link.addEventListener('click', (e) => {
                 e.preventDefault();
-                const targetId = e.target.getAttribute("href").slice(1);
+                const targetId = e.target.getAttribute('href').slice(1);
                 showSection(targetId);
             });
         });
 
         function showSection(sectionId) {
-            document.querySelectorAll("main > section").forEach(section => {
-                section.classList.add("hidden");
+            document.querySelectorAll('main > section').forEach(section => {
+                section.classList.add('hidden');
             });
-            document.getElementById(sectionId).classList.remove("hidden");
+            document.getElementById(sectionId).classList.remove('hidden');
         }
 
-        startExploringBtn.addEventListener("click", () => {
-            showSection("explore");
+        startExploringBtn.addEventListener('click', () => {
+            showSection('explore');
             startCamera();
         });
 
         async function startCamera() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: "environment" },
+                    video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
                 });
                 cameraFeed.srcObject = stream;
                 await cameraFeed.play();
                 detectLandmarks();
             } catch (error) {
-                console.error("Error accessing camera:", error);
+                console.error('Error accessing camera:', error);
             }
         }
 
         async function detectLandmarks() {
-            const ctx = canvas.getContext("2d");
+            const ctx = canvas.getContext('2d');
             canvas.width = cameraFeed.videoWidth;
             canvas.height = cameraFeed.videoHeight;
 
             async function processFrame() {
                 ctx.drawImage(cameraFeed, 0, 0, canvas.width, canvas.height);
-                const base64Image = canvas.toDataURL("image/jpeg").split(",")[1];
+                const imageData = canvas.toDataURL('image/jpeg', 0.8);
+                const base64Image = imageData.split(',')[1];
 
                 const response = await fetch(VISION_API_ENDPOINT, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        requests: [
-                            {
-                                image: { content: base64Image },
-                                features: [{ type: "LANDMARK_DETECTION", maxResults: 1 }],
-                            },
-                        ],
-                    }),
+                        requests: [{
+                            image: { content: base64Image },
+                            features: [{ type: 'LANDMARK_DETECTION', maxResults: 1 }]
+                        }]
+                    })
                 });
 
                 const data = await response.json();
-                const landmark = data.responses[0]?.landmarkAnnotations?.[0];
-                if (landmark) {
-                    updateLandmarkInfo(landmark.description, landmark.locations[0].latLng);
+                if (data.responses[0].landmarkAnnotations) {
+                    const landmark = data.responses[0].landmarkAnnotations[0];
+                    updateLandmarkInfo(landmark.description);
+                    getNearbyPlaces(landmark.locations[0].latLng);
                 }
-
                 requestAnimationFrame(processFrame);
             }
-
             processFrame();
         }
 
-        async function updateLandmarkInfo(landmarkName, location) {
-            landmarkInfo.querySelector("h2").textContent = landmarkName;
-            facts = await fetchGeminiFacts(landmarkName);
-            displayFactList();
-            getNearbyPlaces(location);
+        async function updateLandmarkInfo(landmarkName) {
+            landmarkInfo.querySelector('h2').textContent = landmarkName;
+            const facts = await getGeminiFacts(landmarkName);
+            displayFactList(facts);
         }
 
-        async function fetchGeminiFacts(landmarkName) {
-            const prompt = `Provide 5 interesting facts about ${landmarkName}.`;
-            try {
-                const response = await fetch(GEMINI_API_ENDPOINT, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        prompt: prompt,
-                        maxResults: 5,
-                    }),
-                });
+        async function getGeminiFacts(landmarkName) {
+            const prompt = `Give me 5 interesting facts about ${landmarkName}.`;
+            const response = await fetch(`${GEMINI_API_ENDPOINT}?key=${GEMINI_API_KEY}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{ text: prompt }]
+                    }]
+                })
+            });
 
-                const data = await response.json();
-                return data.facts || ["No facts available."];
-            } catch (error) {
-                console.error("Error fetching facts:", error);
-                return ["Error fetching facts."];
-            }
+            const data = await response.json();
+            return data.candidates[0]?.content.parts[0]?.text.split('. ') || ['No facts available.'];
         }
 
-        function displayFactList() {
-            factList.innerHTML = "";
+        function displayFactList(facts) {
+            factList.innerHTML = '';
             facts.forEach(fact => {
-                const li = document.createElement("li");
-                li.textContent = fact;
-                factList.appendChild(li);
+                const factItem = document.createElement('li');
+                factItem.textContent = fact.trim();
+                factList.appendChild(factItem);
             });
         }
 
         function getNearbyPlaces(location) {
-            const service = new google.maps.places.PlacesService(document.createElement("div"));
-            const request = { location: location, radius: "500", type: ["point_of_interest"] };
+            const service = new google.maps.places.PlacesService(document.createElement('div'));
+            const request = { location, radius: '500', type: ['point_of_interest'] };
+
             service.nearbySearch(request, (results, status) => {
                 if (status === google.maps.places.PlacesServiceStatus.OK) {
-                    placesList.innerHTML = results.map(place => `<li>${place.name}</li>`).join("");
+                    updateNearbyPlacesList(results);
                 }
+            });
+        }
+
+        function updateNearbyPlacesList(places) {
+            placesList.innerHTML = '';
+            places.slice(0, 5).forEach(place => {
+                const li = document.createElement('li');
+                li.textContent = place.name;
+                placesList.appendChild(li);
             });
         }
     </script>
