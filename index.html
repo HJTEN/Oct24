@@ -4,7 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>P.O.I. Explorer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        :root {
+            --primary-color: #4CAF50;
+            --secondary-color: #333;
+            --accent-color: #45a049;
+            --background-color: #f7f7f7;
+            --card-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            --border-radius: 12px;
+        }
+
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -12,29 +22,37 @@
             display: flex;
             flex-direction: column;
             min-height: 100vh;
-            background-color: #f7f7f7;
+            background-color: var(--background-color);
         }
+
         header {
-            background-color: #4CAF50;
+            background-color: var(--primary-color);
             color: white;
             text-align: center;
             padding: 1em;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            box-shadow: var(--card-shadow);
         }
+
         nav {
             display: flex;
             justify-content: space-around;
-            background-color: #333;
+            background-color: var(--secondary-color);
             padding: 0.5em;
         }
+
         nav a {
             color: white;
             text-decoration: none;
             font-size: 16px;
+            padding: 8px 16px;
+            border-radius: var(--border-radius);
+            transition: background-color 0.3s ease;
         }
+
         nav a:hover {
-            text-decoration: underline;
+            background-color: rgba(255, 255, 255, 0.1);
         }
+
         main {
             flex: 1;
             display: flex;
@@ -43,73 +61,129 @@
             padding: 1em;
             overflow-y: auto;
         }
+
         #camera-feed {
             width: 100%;
             max-width: 640px;
             height: auto;
-            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
             margin-bottom: 1em;
         }
+
         #landmark-info {
             margin-top: 1em;
             width: 100%;
             max-width: 640px;
-            padding: 1em;
+            padding: 1.5em;
             background-color: #fff;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            border-radius: 8px;
+            box-shadow: var(--card-shadow);
+            border-radius: var(--border-radius);
+            transition: transform 0.3s ease;
         }
-        h2 {
-            font-size: 1.5em;
-            margin-bottom: 0.5em;
-            color: #333;
+
+        .loading {
+            position: relative;
+            overflow: hidden;
         }
+
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            100% { left: 100%; }
+        }
+
         #fact-list {
             list-style-type: none;
             padding: 0;
             margin: 0;
         }
+
         #fact-list li {
             background-color: #f9f9f9;
             margin: 0.5em 0;
             padding: 1em;
-            border-radius: 8px;
+            border-radius: var(--border-radius);
             border: 1px solid #ddd;
             font-size: 1.1em;
             line-height: 1.6;
+            transition: transform 0.2s ease;
         }
-        .fact-item {
-            margin-bottom: 10px;
+
+        #fact-list li:hover {
+            transform: translateX(5px);
         }
-        .fact-item span {
-            font-weight: bold;
-            color: #4CAF50;
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: center;
         }
-        #load-more-btn {
-            background-color: #4CAF50;
-            color: white;
+
+        .action-button {
+            padding: 8px 16px;
             border: none;
-            padding: 10px 20px;
+            border-radius: var(--border-radius);
+            background: var(--primary-color);
+            color: white;
             cursor: pointer;
-            margin-top: 1em;
-            font-size: 1.1em;
-            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.3s ease;
         }
-        #load-more-btn:hover {
-            background-color: #45a049;
+
+        .action-button:hover {
+            background: var(--accent-color);
+            transform: translateY(-2px);
         }
+
         .hidden {
             display: none;
         }
+
+        #ar-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .favorites-panel {
+            position: fixed;
+            right: 20px;
+            top: 80px;
+            background: white;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
+            max-width: 300px;
+            z-index: 1000;
+            transform: translateX(120%);
+            transition: transform 0.3s ease;
+        }
+
+        .favorites-panel.visible {
+            transform: translateX(0);
+        }
+
         @media (max-width: 600px) {
+            .action-buttons {
+                flex-wrap: wrap;
+            }
             #landmark-info {
                 padding: 0.8em;
-            }
-            h2 {
-                font-size: 1.2em;
-            }
-            #fact-list li {
-                font-size: 1em;
             }
         }
     </style>
@@ -126,24 +200,44 @@
     <main id="main-content">
         <section id="home" class="active">
             <h2>Welcome to P.O.I. Explorer</h2>
-            <button id="start-exploring">Start Exploring</button>
+            <button id="start-exploring" class="action-button">
+                <i class="fas fa-compass"></i>
+                Start Exploring
+            </button>
         </section>
         <section id="explore" class="hidden">
             <video id="camera-feed" autoplay playsinline></video>
             <canvas id="canvas" style="display:none;"></canvas>
             <div id="landmark-info">
-                <h2>Landmark Name</h2>
+                <h2>Point your camera at a landmark</h2>
                 <ul id="fact-list"></ul>
-                <button id="load-more-btn" class="hidden">Load More Facts</button>
+                <div class="action-buttons">
+                    <button id="share-button" class="action-button">
+                        <i class="fas fa-share"></i>
+                        Share
+                    </button>
+                    <button id="favorite-button" class="action-button">
+                        <i class="fas fa-heart"></i>
+                        Save
+                    </button>
+                    <button id="toggle-ar" class="action-button">
+                        <i class="fas fa-vr-cardboard"></i>
+                        Toggle AR
+                    </button>
+                </div>
             </div>
         </section>
         <section id="nearby" class="hidden">
             <h2>Nearby Places</h2>
             <ul id="places-list"></ul>
         </section>
+        
+        <div class="favorites-panel">
+            <h3>Saved Landmarks</h3>
+            <ul id="favorites-list"></ul>
+        </div>
     </main>
 
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4&libraries=places"></script>
     <script>
         // DOM elements
         const mainContent = document.getElementById('main-content');
@@ -152,18 +246,16 @@
         const canvas = document.getElementById('canvas');
         const landmarkInfo = document.getElementById('landmark-info');
         const factList = document.getElementById('fact-list');
-        const loadMoreBtn = document.getElementById('load-more-btn');
-        const placesList = document.getElementById('places-list');
+        const shareButton = document.getElementById('share-button');
+        const favoriteButton = document.getElementById('favorite-button');
+        const toggleARButton = document.getElementById('toggle-ar');
+        const favoritesPanel = document.querySelector('.favorites-panel');
 
         // API keys and endpoints
         const GOOGLE_API_KEY = 'AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4';
         const VISION_API_ENDPOINT = `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`;
         const GEMINI_API_KEY = 'AIzaSyAFizOjhryoAOW4KdGjCuqyrtPG3_sSclo';
         const GEMINI_API_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
-
-        // Carousel variables
-        let facts = [];
-        let currentFactIndex = 0;
 
         // Navigation
         document.querySelectorAll('nav a').forEach(link => {
@@ -181,6 +273,7 @@
             document.getElementById(sectionId).classList.remove('hidden');
         }
 
+        // Core functionality
         startExploringBtn.addEventListener('click', () => {
             showSection('explore');
             startCamera();
@@ -204,6 +297,7 @@
         }
 
         async function detectLandmarks() {
+            landmarkInfo.classList.add('loading');
             const ctx = canvas.getContext('2d');
             canvas.width = cameraFeed.videoWidth;
             canvas.height = cameraFeed.videoHeight;
@@ -213,36 +307,41 @@
                 const imageData = canvas.toDataURL('image/jpeg', 0.8);
                 const base64Image = imageData.split(',')[1];
 
-                const response = await fetch(VISION_API_ENDPOINT, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        requests: [{
-                            image: { content: base64Image },
-                            features: [{ type: 'LANDMARK_DETECTION', maxResults: 1 }]
-                        }]
-                    })
-                });
+                try {
+                    const response = await fetch(VISION_API_ENDPOINT, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            requests: [{
+                                image: { content: base64Image },
+                                features: [{ type: 'LANDMARK_DETECTION', maxResults: 1 }]
+                            }]
+                        })
+                    });
 
-                const data = await response.json();
-                if (data.responses[0].landmarkAnnotations) {
-                    const landmark = data.responses[0].landmarkAnnotations[0];
-                    updateLandmarkInfo(landmark.description);
-                    getNearbyPlaces(landmark.locations[0].latLng);
+                    const data = await response.json();
+                    if (data.responses[0].landmarkAnnotations) {
+                        const landmark = data.responses[0].landmarkAnnotations[0];
+                        await updateLandmarkInfo(landmark.description);
+                        if (arEnabled) updateAROverlay(landmark);
+                    }
+                } catch (error) {
+                    console.error('Error detecting landmarks:', error);
                 }
 
                 requestAnimationFrame(processFrame);
             }
 
             processFrame();
+            landmarkInfo.classList.remove('loading');
         }
 
         async function updateLandmarkInfo(landmarkName) {
             landmarkInfo.querySelector('h2').textContent = landmarkName;
-            facts = await getGeminiFacts(landmarkName);
-            displayFactList();
+            const facts = await getGeminiFacts(landmarkName);
+            displayFacts(facts);
         }
 
         async function getGeminiFacts(landmarkName) {
@@ -264,75 +363,92 @@
                 });
 
                 const data = await response.json();
-                
-                // Extract the generated text from Gemini's response
                 const generatedText = data.candidates[0].content.parts[0].text;
-                
-                // Split the text into individual facts
-                const facts = generatedText.split(/(?<=\.|\?|\!)\s+/).filter(fact => fact.trim().length > 0);
-                
-                return facts.length > 0 ? facts : ['No information available.'];
+                return generatedText.split(/(?<=\.|\?|\!)\s+/).filter(fact => fact.trim().length > 0);
             } catch (error) {
-                console.error('Error fetching facts from Gemini:', error);
+                console.error('Error fetching facts:', error);
                 return ['Unable to fetch information about this landmark.'];
             }
         }
 
-        function displayFactList() {
+        function displayFacts(facts) {
             factList.innerHTML = '';
-            facts.slice(0, 10).forEach(fact => {
-                const factItem = document.createElement('li');
-                factItem.textContent = fact.trim();
-                factList.appendChild(factItem);
-            });
-
-            // Show the "Load More Facts" button if there are more facts
-            if (facts.length > 10) {
-                loadMoreBtn.classList.remove('hidden');
-                loadMoreBtn.addEventListener('click', loadMoreFacts);
-            } else {
-                loadMoreBtn.classList.add('hidden');
-            }
-        }
-
-        function loadMoreFacts() {
-            const currentFactCount = factList.children.length;
-            const nextFacts = facts.slice(currentFactCount, currentFactCount + 10);
-
-            nextFacts.forEach(fact => {
-                const factItem = document.createElement('li');
-                factItem.textContent = fact.trim();
-                factList.appendChild(factItem);
-            });
-
-            if (factList.children.length >= facts.length) {
-                loadMoreBtn.classList.add('hidden');
-            }
-        }
-
-        function getNearbyPlaces(location) {
-            const service = new google.maps.places.PlacesService(document.createElement('div'));
-            const request = {
-                location: location,
-                radius: '500',
-                type: ['point_of_interest']
-            };
-
-            service.nearbySearch(request, (results, status) => {
-                if (status === google.maps.places.PlacesServiceStatus.OK) {
-                    updateNearbyPlacesList(results);
-                }
-            });
-        }
-
-        function updateNearbyPlacesList(places) {
-            placesList.innerHTML = '';
-            places.slice(0, 5).forEach(place => {
+            facts.forEach(fact => {
                 const li = document.createElement('li');
-                li.textContent = place.name;
-                placesList.appendChild(li);
+                li.textContent = fact;
+                factList.appendChild(li);
             });
         }
+
+        // New Features
+        let arEnabled = false;
+        
+        toggleARButton.addEventListener('click', () => {
+            arEnabled = !arEnabled;
+            toggleARButton.innerHTML = `<i class="fas fa-vr-cardboard"></i> ${arEnabled ? 'Disable AR' : 'Enable AR'}`;
+        });
+
+        shareButton.addEventListener('click', async () => {
+            const landmarkName = landmarkInfo.querySelector('h2').textContent;
+            const firstFact = factList.querySelector('li')?.textContent;
+            
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: `Check out ${landmarkName}!`,
+                        text: firstFact,
+                        url: window.location.href
+                    });
+                } catch (error) {
+                    console.error('Error sharing:', error);
+                }
+            }
+        });
+
+        // Favorites System
+        const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+        
+        favoriteButton.addEventListener('click', () => {
+            const landmarkName = landmarkInfo.querySelector('h2').textContent;
+            if (!favorites.includes(landmarkName)) {
+                favorites.push(landmarkName);
+                localStorage.setItem('favorites', JSON.stringify(favorites));
+                updateFavoritesList();
+                favoritesPanel.classList.add('visible');
+            }
+        });
+
+        function updateFavoritesList() {
+            const favoritesList = document.getElementById('favorites-list');
+            favoritesList.innerHTML = '';
+            favorites.forEach(landmark => {
+                const li = document.createElement('li');
+                li.textContent = landmark;
+                favoritesList.appendChild(li);
+            });
+        }
+
+        // AR Overlay
+        function updateAROverlay(landmark) {
+            const arCanvas = document.createElement('canvas');
+            arCanvas.id = 'ar-overlay';
+            arCanvas.width = cameraFeed.videoWidth;
+            arCanvas.height = cameraFeed.videoHeight;
+            
+            const ctx = arCanvas.getContext('2d');
+            ctx.fillStyle = 'rgba(255,255,255,0.8)';
+            ctx.fillRect(10, 10, 200, 100);
+            ctx.fillStyle = '#000';
+            ctx.font = '16px Arial';
+            ctx.fillText(landmark.description, 20, 30);
+            
+            const existingOverlay = document.getElementById('ar-overlay');
+            if (existingOverlay) existingOverlay.remove();
+            document.querySelector('#explore').appendChild(arCanvas);
+        }
+
+        // Initialize
+        updateFavoritesList();
     </script>
 </body>
 </html>
