@@ -3,452 +3,212 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>P.O.I. Explorer</title>
+    <title>Tour Guide in Your Pocket</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root {
-            --primary-color: #4CAF50;
-            --secondary-color: #333;
-            --accent-color: #45a049;
-            --background-color: #f7f7f7;
-            --card-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            --border-radius: 12px;
-        }
-
+        /* General styling for layout and design */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            background-color: var(--background-color);
+            background: #f4f4f9;
         }
 
         header {
-            background-color: var(--primary-color);
+            background: #4CAF50;
             color: white;
+            padding: 1rem;
             text-align: center;
-            padding: 1em;
-            box-shadow: var(--card-shadow);
-        }
-
-        nav {
-            display: flex;
-            justify-content: space-around;
-            background-color: var(--secondary-color);
-            padding: 0.5em;
-        }
-
-        nav a {
-            color: white;
-            text-decoration: none;
-            font-size: 16px;
-            padding: 8px 16px;
-            border-radius: var(--border-radius);
-            transition: background-color 0.3s ease;
-        }
-
-        nav a:hover {
-            background-color: rgba(255, 255, 255, 0.1);
         }
 
         main {
-            flex: 1;
+            padding: 1rem;
+        }
+
+        #camera-container {
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 1em;
-            overflow-y: auto;
         }
 
         #camera-feed {
             width: 100%;
-            max-width: 640px;
+            max-width: 600px;
             height: auto;
-            border-radius: var(--border-radius);
-            box-shadow: var(--card-shadow);
-            margin-bottom: 1em;
+            border: 2px solid #ddd;
+            border-radius: 8px;
         }
 
-        #landmark-info {
-            margin-top: 1em;
-            width: 100%;
-            max-width: 640px;
-            padding: 1.5em;
-            background-color: #fff;
-            box-shadow: var(--card-shadow);
-            border-radius: var(--border-radius);
-            transition: transform 0.3s ease;
+        #info-container {
+            margin-top: 2rem;
         }
 
-        .loading {
-            position: relative;
-            overflow: hidden;
-        }
-
-        .loading::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            animation: loading 1.5s infinite;
-        }
-
-        @keyframes loading {
-            100% { left: 100%; }
-        }
-
-        #fact-list {
-            list-style-type: none;
+        ul {
+            list-style: none;
             padding: 0;
-            margin: 0;
         }
 
-        #fact-list li {
-            background-color: #f9f9f9;
-            margin: 0.5em 0;
-            padding: 1em;
-            border-radius: var(--border-radius);
-            border: 1px solid #ddd;
-            font-size: 1.1em;
-            line-height: 1.6;
-            transition: transform 0.2s ease;
-        }
-
-        #fact-list li:hover {
-            transform: translateX(5px);
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-            justify-content: center;
-        }
-
-        .action-button {
-            padding: 8px 16px;
-            border: none;
-            border-radius: var(--border-radius);
-            background: var(--primary-color);
-            color: white;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            transition: all 0.3s ease;
-        }
-
-        .action-button:hover {
-            background: var(--accent-color);
-            transform: translateY(-2px);
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        #ar-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            pointer-events: none;
-            z-index: 10;
-        }
-
-        .favorites-panel {
-            position: fixed;
-            right: 20px;
-            top: 80px;
+        li {
             background: white;
-            padding: 15px;
-            border-radius: var(--border-radius);
-            box-shadow: var(--card-shadow);
-            max-width: 300px;
-            z-index: 1000;
-            transform: translateX(120%);
-            transition: transform 0.3s ease;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
         }
 
-        .favorites-panel.visible {
-            transform: translateX(0);
+        button {
+            margin-top: 1rem;
+            padding: 0.75rem 1.5rem;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
         }
 
-        @media (max-width: 600px) {
-            .action-buttons {
-                flex-wrap: wrap;
-            }
-            #landmark-info {
-                padding: 0.8em;
-            }
+        button:hover {
+            background: #45a049;
         }
     </style>
 </head>
 <body>
     <header>
-        <h1>P.O.I. Explorer</h1>
+        <h1>Tour Guide in Your Pocket</h1>
     </header>
-    <nav>
-        <a href="#home">Home</a>
-        <a href="#explore">Explore</a>
-        <a href="#nearby">Nearby Places</a>
-    </nav>
-    <main id="main-content">
-        <section id="home" class="active">
-            <h2>Welcome to P.O.I. Explorer</h2>
-            <button id="start-exploring" class="action-button">
-                <i class="fas fa-compass"></i>
-                Start Exploring
-            </button>
-        </section>
-        <section id="explore" class="hidden">
+    <main>
+        <!-- Camera feed -->
+        <section id="camera-container">
+            <h2>Live Camera Feed</h2>
             <video id="camera-feed" autoplay playsinline></video>
-            <canvas id="canvas" style="display:none;"></canvas>
-            <div id="landmark-info">
-                <h2>Point your camera at a landmark</h2>
-                <ul id="fact-list"></ul>
-                <div class="action-buttons">
-                    <button id="share-button" class="action-button">
-                        <i class="fas fa-share"></i>
-                        Share
-                    </button>
-                    <button id="favorite-button" class="action-button">
-                        <i class="fas fa-heart"></i>
-                        Save
-                    </button>
-                    <button id="toggle-ar" class="action-button">
-                        <i class="fas fa-vr-cardboard"></i>
-                        Toggle AR
-                    </button>
-                </div>
-            </div>
         </section>
-        <section id="nearby" class="hidden">
-            <h2>Nearby Places</h2>
-            <ul id="places-list"></ul>
+
+        <!-- Landmark information -->
+        <section id="info-container">
+            <h2>Landmark Information</h2>
+            <ul id="fact-list"></ul>
+            <button id="read-aloud-btn">Read Facts Aloud</button>
+            <button id="save-favorite-btn">Save to Favorites</button>
         </section>
-        
-        <div class="favorites-panel">
-            <h3>Saved Landmarks</h3>
-            <ul id="favorites-list"></ul>
-        </div>
     </main>
 
     <script>
-        // DOM elements
-        const mainContent = document.getElementById('main-content');
-        const startExploringBtn = document.getElementById('start-exploring');
-        const cameraFeed = document.getElementById('camera-feed');
-        const canvas = document.getElementById('canvas');
-        const landmarkInfo = document.getElementById('landmark-info');
-        const factList = document.getElementById('fact-list');
-        const shareButton = document.getElementById('share-button');
-        const favoriteButton = document.getElementById('favorite-button');
-        const toggleARButton = document.getElementById('toggle-ar');
-        const favoritesPanel = document.querySelector('.favorites-panel');
+        // Constants for API keys and URLs
+        const GOOGLE_API_KEY = "AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4";
+        const GEMINI_API_KEY = "AIzaSyAFizOjhryoAOW4KdGjCuqyrtPG3_sSclo";
+        const VISION_API_URL = `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`;
+        const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`;
 
-        // API keys and endpoints
-        const GOOGLE_API_KEY = 'AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4';
-        const VISION_API_ENDPOINT = `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`;
-        const GEMINI_API_KEY = 'AIzaSyAFizOjhryoAOW4KdGjCuqyrtPG3_sSclo';
-        const GEMINI_API_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+        // Elements from the DOM
+        const video = document.getElementById("camera-feed");
+        const factList = document.getElementById("fact-list");
+        const readAloudBtn = document.getElementById("read-aloud-btn");
+        const saveFavoriteBtn = document.getElementById("save-favorite-btn");
 
-        // Navigation
-        document.querySelectorAll('nav a').forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const targetId = e.target.getAttribute('href').slice(1);
-                showSection(targetId);
-            });
-        });
-
-        function showSection(sectionId) {
-            document.querySelectorAll('main > section').forEach(section => {
-                section.classList.add('hidden');
-            });
-            document.getElementById(sectionId).classList.remove('hidden');
-        }
-
-        // Core functionality
-        startExploringBtn.addEventListener('click', () => {
-            showSection('explore');
-            startCamera();
-        });
-
+        // Camera feed setup
         async function startCamera() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        facingMode: 'environment',
-                        width: { ideal: 1920 },
-                        height: { ideal: 1080 }
-                    }
-                });
-                cameraFeed.srcObject = stream;
-                await cameraFeed.play();
-                detectLandmarks();
-            } catch (error) {
-                console.error('Error accessing camera:', error);
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                video.srcObject = stream;
+            } catch (err) {
+                console.error("Error starting camera:", err);
             }
         }
 
-        async function detectLandmarks() {
-            landmarkInfo.classList.add('loading');
-            const ctx = canvas.getContext('2d');
-            canvas.width = cameraFeed.videoWidth;
-            canvas.height = cameraFeed.videoHeight;
+        // Google Vision API request
+        async function detectLandmark() {
+            const canvas = document.createElement("canvas");
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            async function processFrame() {
-                ctx.drawImage(cameraFeed, 0, 0, canvas.width, canvas.height);
-                const imageData = canvas.toDataURL('image/jpeg', 0.8);
-                const base64Image = imageData.split(',')[1];
-
-                try {
-                    const response = await fetch(VISION_API_ENDPOINT, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            requests: [{
-                                image: { content: base64Image },
-                                features: [{ type: 'LANDMARK_DETECTION', maxResults: 1 }]
-                            }]
-                        })
-                    });
-
-                    const data = await response.json();
-                    if (data.responses[0].landmarkAnnotations) {
-                        const landmark = data.responses[0].landmarkAnnotations[0];
-                        await updateLandmarkInfo(landmark.description);
-                        if (arEnabled) updateAROverlay(landmark);
-                    }
-                } catch (error) {
-                    console.error('Error detecting landmarks:', error);
-                }
-
-                requestAnimationFrame(processFrame);
-            }
-
-            processFrame();
-            landmarkInfo.classList.remove('loading');
-        }
-
-        async function updateLandmarkInfo(landmarkName) {
-            landmarkInfo.querySelector('h2').textContent = landmarkName;
-            const facts = await getGeminiFacts(landmarkName);
-            displayFacts(facts);
-        }
-
-        async function getGeminiFacts(landmarkName) {
-            const prompt = `Give me 5 interesting facts about ${landmarkName}. Present each fact as a complete sentence. Focus on historical significance, architectural details, and cultural importance.`;
+            const imageData = canvas.toDataURL("image/jpeg").split(",")[1];
+            const visionRequest = {
+                requests: [
+                    {
+                        image: { content: imageData },
+                        features: [{ type: "LANDMARK_DETECTION", maxResults: 1 }],
+                    },
+                ],
+            };
 
             try {
-                const response = await fetch(`${GEMINI_API_ENDPOINT}?key=${GEMINI_API_KEY}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [{
-                                text: prompt
-                            }]
-                        }]
-                    })
+                const response = await fetch(VISION_API_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(visionRequest),
                 });
-
                 const data = await response.json();
-                const generatedText = data.candidates[0].content.parts[0].text;
-                return generatedText.split(/(?<=\.|\?|\!)\s+/).filter(fact => fact.trim().length > 0);
-            } catch (error) {
-                console.error('Error fetching facts:', error);
-                return ['Unable to fetch information about this landmark.'];
-            }
-        }
+                const landmark = data.responses[0]?.landmarkAnnotations?.[0]?.description;
 
-        function displayFacts(facts) {
-            factList.innerHTML = '';
-            facts.forEach(fact => {
-                const li = document.createElement('li');
-                li.textContent = fact;
-                factList.appendChild(li);
-            });
-        }
-
-        // New Features
-        let arEnabled = false;
-        
-        toggleARButton.addEventListener('click', () => {
-            arEnabled = !arEnabled;
-            toggleARButton.innerHTML = `<i class="fas fa-vr-cardboard"></i> ${arEnabled ? 'Disable AR' : 'Enable AR'}`;
-        });
-
-        shareButton.addEventListener('click', async () => {
-            const landmarkName = landmarkInfo.querySelector('h2').textContent;
-            const firstFact = factList.querySelector('li')?.textContent;
-            
-            if (navigator.share) {
-                try {
-                    await navigator.share({
-                        title: `Check out ${landmarkName}!`,
-                        text: firstFact,
-                        url: window.location.href
-                    });
-                } catch (error) {
-                    console.error('Error sharing:', error);
+                if (landmark) {
+                    console.log(`Detected landmark: ${landmark}`);
+                    const facts = await fetchLandmarkFacts(landmark);
+                    updateFactList(facts);
+                } else {
+                    console.log("No landmark detected.");
                 }
+            } catch (err) {
+                console.error("Error detecting landmark:", err);
             }
-        });
 
-        // Favorites System
-        const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-        
-        favoriteButton.addEventListener('click', () => {
-            const landmarkName = landmarkInfo.querySelector('h2').textContent;
-            if (!favorites.includes(landmarkName)) {
-                favorites.push(landmarkName);
-                localStorage.setItem('favorites', JSON.stringify(favorites));
-                updateFavoritesList();
-                favoritesPanel.classList.add('visible');
+            // Continuously process frames for detection
+            requestAnimationFrame(detectLandmark);
+        }
+
+        // Gemini API integration for generating facts
+        async function fetchLandmarkFacts(landmark) {
+            const prompt = `Provide 5 interesting facts about ${landmark}.`;
+            const geminiRequest = {
+                prompt: { text: prompt },
+                temperature: 0.7,
+                maxOutputTokens: 200,
+            };
+
+            try {
+                const response = await fetch(GEMINI_API_URL, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${GEMINI_API_KEY}`,
+                    },
+                    body: JSON.stringify(geminiRequest),
+                });
+                const data = await response.json();
+                return data.candidates[0]?.output.split("\n").filter(Boolean) || ["No facts found."];
+            } catch (err) {
+                console.error("Error fetching facts from Gemini:", err);
+                return ["Error retrieving facts."];
             }
-        });
+        }
 
-        function updateFavoritesList() {
-            const favoritesList = document.getElementById('favorites-list');
-            favoritesList.innerHTML = '';
-            favorites.forEach(landmark => {
-                const li = document.createElement('li');
-                li.textContent = landmark;
-                favoritesList.appendChild(li);
+        // Update the fact list in the UI
+        function updateFactList(facts) {
+            factList.innerHTML = ""; // Clear previous facts
+            facts.forEach((fact) => {
+                const listItem = document.createElement("li");
+                listItem.textContent = fact;
+                factList.appendChild(listItem);
             });
         }
 
-        // AR Overlay
-        function updateAROverlay(landmark) {
-            const arCanvas = document.createElement('canvas');
-            arCanvas.id = 'ar-overlay';
-            arCanvas.width = cameraFeed.videoWidth;
-            arCanvas.height = cameraFeed.videoHeight;
-            
-            const ctx = arCanvas.getContext('2d');
-            ctx.fillStyle = 'rgba(255,255,255,0.8)';
-            ctx.fillRect(10, 10, 200, 100);
-            ctx.fillStyle = '#000';
-            ctx.font = '16px Arial';
-            ctx.fillText(landmark.description, 20, 30);
-            
-            const existingOverlay = document.getElementById('ar-overlay');
-            if (existingOverlay) existingOverlay.remove();
-            document.querySelector('#explore').appendChild(arCanvas);
-        }
+        // Read facts aloud using Text-to-Speech
+        readAloudBtn.addEventListener("click", () => {
+            const speech = new SpeechSynthesisUtterance(
+                Array.from(factList.children)
+                    .map((li) => li.textContent)
+                    .join(". ")
+            );
+            window.speechSynthesis.speak(speech);
+        });
 
-        // Initialize
-        updateFavoritesList();
+        // Save favorite landmark (placeholder)
+        saveFavoriteBtn.addEventListener("click", () => {
+            alert("Feature to save favorites coming soon!");
+        });
+
+        // Initialize camera and start detection
+        startCamera().then(detectLandmark);
     </script>
 </body>
 </html>
