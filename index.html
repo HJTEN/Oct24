@@ -78,7 +78,9 @@
             background-color: #45a049;
         }
         #loading-spinner {
-            margin-top: 1em;
+            margin: 1em;
+            text-align: center;
+            font-size: 1.5em;
             display: none;
         }
         .hidden {
@@ -106,8 +108,8 @@
             <div id="landmark-info">
                 <h2>Landmark Name</h2>
                 <ul id="fact-list"></ul>
+                <div id="loading-spinner">Loading Facts...</div>
                 <button id="load-more-btn" class="hidden">Load More Facts</button>
-                <div id="loading-spinner" class="hidden">Loading...</div>
             </div>
         </section>
         <section id="nearby" class="hidden">
@@ -220,7 +222,7 @@
         }
 
         async function getGeminiFacts(landmarkName) {
-            const prompt = `Give me 15 interesting facts about ${landmarkName}. Focus on history, architecture, culture`;
+            const prompt = `You are a tour guide, Give me 10 interesting facts about ${landmarkName}. Focus on history, architecture, culture`;
 
             try {
                 const response = await fetch(`${GEMINI_API_ENDPOINT}?key=${GEMINI_API_KEY}`, {
@@ -240,7 +242,6 @@
                 const data = await response.json();
                 
                 const generatedText = data.candidates[0].content.parts[0].text;
-                
                 const facts = generatedText.split(/(?<=\.|\?|\!)\s+/).filter(fact => fact.trim().length > 0);
                 
                 return facts.length > 0 ? facts : ['No information available.'];
@@ -251,8 +252,9 @@
         }
 
         function displayFactList() {
-            loadingSpinner.classList.add('hidden');
             factList.innerHTML = '';
+            loadingSpinner.classList.add('hidden'); // Hide loading spinner once facts are ready
+
             facts.slice(0, 10).forEach(fact => {
                 const factItem = document.createElement('li');
                 factItem.textContent = fact.trim();
