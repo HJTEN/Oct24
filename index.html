@@ -77,6 +77,10 @@
         #load-more-btn:hover {
             background-color: #45a049;
         }
+        #loading-spinner {
+            margin-top: 1em;
+            display: none;
+        }
         .hidden {
             display: none;
         }
@@ -103,6 +107,7 @@
                 <h2>Landmark Name</h2>
                 <ul id="fact-list"></ul>
                 <button id="load-more-btn" class="hidden">Load More Facts</button>
+                <div id="loading-spinner" class="hidden">Loading...</div>
             </div>
         </section>
         <section id="nearby" class="hidden">
@@ -122,6 +127,7 @@
         const factList = document.getElementById('fact-list');
         const loadMoreBtn = document.getElementById('load-more-btn');
         const placesList = document.getElementById('places-list');
+        const loadingSpinner = document.getElementById('loading-spinner');
 
         // API keys and endpoints
         const GOOGLE_API_KEY = 'AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4';
@@ -214,7 +220,7 @@
         }
 
         async function getGeminiFacts(landmarkName) {
-            const prompt = `You are a tour guide, Give me 10 interesting facts about ${landmarkName}. Focus on history, architecture, culture`;
+            const prompt = `Give me 15 interesting facts about ${landmarkName}. Focus on history, architecture, culture`;
 
             try {
                 const response = await fetch(`${GEMINI_API_ENDPOINT}?key=${GEMINI_API_KEY}`, {
@@ -233,10 +239,8 @@
 
                 const data = await response.json();
                 
-                // Extract the generated text from Gemini's response
                 const generatedText = data.candidates[0].content.parts[0].text;
                 
-                // Split the text into individual facts
                 const facts = generatedText.split(/(?<=\.|\?|\!)\s+/).filter(fact => fact.trim().length > 0);
                 
                 return facts.length > 0 ? facts : ['No information available.'];
@@ -247,6 +251,7 @@
         }
 
         function displayFactList() {
+            loadingSpinner.classList.add('hidden');
             factList.innerHTML = '';
             facts.slice(0, 10).forEach(fact => {
                 const factItem = document.createElement('li');
