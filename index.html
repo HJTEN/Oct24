@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>P.O.I. Explorer</title>
     <style>
-        /* Basic styles for layout */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -79,6 +78,13 @@
             font-size: 1.1em;
             line-height: 1.6;
         }
+        .fact-item {
+            margin-bottom: 10px;
+        }
+        .fact-item span {
+            font-weight: bold;
+            color: #4CAF50;
+        }
         #load-more-btn {
             background-color: #4CAF50;
             color: white;
@@ -95,69 +101,16 @@
         .hidden {
             display: none;
         }
-        .favorite-btn {
-            background-color: #FFD700;
-            border: none;
-            padding: 10px 20px;
-            cursor: pointer;
-            margin-top: 10px;
-            font-size: 1em;
-            border-radius: 5px;
-        }
-        .favorite-btn:hover {
-            background-color: #FFB700;
-        }
-        .quiz-btn {
-            background-color: #2196F3;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            font-size: 1.1em;
-            cursor: pointer;
-            border-radius: 5px;
-            margin-top: 1em;
-        }
-        .quiz-btn:hover {
-            background-color: #1976D2;
-        }
-        .quiz-container {
-            width: 100%;
-            max-width: 640px;
-            background-color: #fff;
-            padding: 1em;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            border-radius: 8px;
-            margin-top: 1em;
-        }
-        .quiz-question {
-            font-size: 1.2em;
-            margin-bottom: 1em;
-        }
-        .quiz-options {
-            list-style-type: none;
-            padding: 0;
-        }
-        .quiz-options li {
-            background-color: #f9f9f9;
-            margin: 0.5em 0;
-            padding: 1em;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-            cursor: pointer;
-        }
-        .quiz-options li:hover {
-            background-color: #ddd;
-        }
-        .quiz-result {
-            font-size: 1.5em;
-            margin-top: 1em;
-        }
-        .score-container {
-            font-size: 1.2em;
-            margin-top: 1em;
-        }
-        .score-container span {
-            font-weight: bold;
+        @media (max-width: 600px) {
+            #landmark-info {
+                padding: 0.8em;
+            }
+            h2 {
+                font-size: 1.2em;
+            }
+            #fact-list li {
+                font-size: 1em;
+            }
         }
     </style>
 </head>
@@ -169,13 +122,11 @@
         <a href="#home">Home</a>
         <a href="#explore">Explore</a>
         <a href="#nearby">Nearby Places</a>
-        <a href="#favorites">Favorites</a>
     </nav>
     <main id="main-content">
         <section id="home" class="active">
             <h2>Welcome to P.O.I. Explorer</h2>
             <button id="start-exploring">Start Exploring</button>
-            <button id="start-voice-guide" class="hidden">Start Voice Guide</button> <!-- New button for voice guide -->
         </section>
         <section id="explore" class="hidden">
             <video id="camera-feed" autoplay playsinline></video>
@@ -184,64 +135,37 @@
                 <h2>Landmark Name</h2>
                 <ul id="fact-list"></ul>
                 <button id="load-more-btn" class="hidden">Load More Facts</button>
-                <button id="favorite-btn" class="favorite-btn hidden">Add to Favorites</button>
-                <button id="read-facts-btn" class="favorite-btn hidden">Read Facts Aloud</button> <!-- New button for reading facts -->
-                <button id="quiz-btn" class="quiz-btn hidden">Start Quiz</button> <!-- Quiz Button -->
             </div>
         </section>
         <section id="nearby" class="hidden">
             <h2>Nearby Places</h2>
             <ul id="places-list"></ul>
         </section>
-        <section id="favorites" class="hidden">
-            <h2>Your Favorite Landmarks</h2>
-            <ul id="favorites-list"></ul>
-        </section>
-        <section id="quiz" class="hidden quiz-container">
-            <div id="quiz-question" class="quiz-question"></div>
-            <ul id="quiz-options" class="quiz-options"></ul>
-            <div class="score-container">
-                <span id="score">Score: 0</span>
-                / 10
-            </div>
-        </section>
     </main>
 
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4&libraries=places"></script>
     <script>
         // DOM elements
         const mainContent = document.getElementById('main-content');
         const startExploringBtn = document.getElementById('start-exploring');
-        const startVoiceGuideBtn = document.getElementById('start-voice-guide'); // New button
         const cameraFeed = document.getElementById('camera-feed');
         const canvas = document.getElementById('canvas');
         const landmarkInfo = document.getElementById('landmark-info');
         const factList = document.getElementById('fact-list');
         const loadMoreBtn = document.getElementById('load-more-btn');
         const placesList = document.getElementById('places-list');
-        const favoriteBtn = document.getElementById('favorite-btn');
-        const favoritesList = document.getElementById('favorites-list');
-        const readFactsBtn = document.getElementById('read-facts-btn'); // New button
-        const quizBtn = document.getElementById('quiz-btn');
-        const quizContainer = document.getElementById('quiz');
-        const quizQuestion = document.getElementById('quiz-question');
-        const quizOptions = document.getElementById('quiz-options');
-        const scoreElement = document.getElementById('score');
 
-        // Initialize Favorite Landmarks and Detected Landmarks
-        let favoriteLandmarks = JSON.parse(localStorage.getItem('favorites')) || [];
-        let detectedLandmarks = [];
+        // API keys and endpoints
+        const GOOGLE_API_KEY = 'AIzaSyA4Xo27wNyl5vJXm32137rlFa4VAcc7JJ4';
+        const VISION_API_ENDPOINT = `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`;
+        const GEMINI_API_KEY = 'AIzaSyA2w8Bu0fMKH2_NUnssYF5HnmgnP101R8I';
+        const GEMINI_API_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
-        // Current landmark state
-        let currentLandmark = null;
+        // Carousel variables
         let facts = [];
         let currentFactIndex = 0;
 
-        // Quiz state
-        let quizQuestions = [];
-        let currentQuestionIndex = 0;
-        let score = 0;
-
-        // Show or hide sections based on navigation
+        // Navigation
         document.querySelectorAll('nav a').forEach(link => {
             link.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -260,11 +184,6 @@
         startExploringBtn.addEventListener('click', () => {
             showSection('explore');
             startCamera();
-            startVoiceGuideBtn.classList.remove('hidden'); // Show Voice Guide button
-        });
-
-        startVoiceGuideBtn.addEventListener('click', () => {
-            startVoiceGuide();
         });
 
         async function startCamera() {
@@ -310,9 +229,8 @@
                 const data = await response.json();
                 if (data.responses[0].landmarkAnnotations) {
                     const landmark = data.responses[0].landmarkAnnotations[0];
-                    currentLandmark = landmark.description;
-                    detectedLandmarks.push(currentLandmark); // Store detected landmark
                     updateLandmarkInfo(landmark.description);
+                    getNearbyPlaces(landmark.locations[0].latLng);
                 }
 
                 requestAnimationFrame(processFrame);
@@ -346,10 +264,13 @@
                 });
 
                 const data = await response.json();
+                
+                // Extract the generated text from Gemini's response
                 const generatedText = data.candidates[0].content.parts[0].text;
-
+                
+                // Split the text into individual facts
                 const facts = generatedText.split(/(?<=\.|\?|\!)\s+/).filter(fact => fact.trim().length > 0);
-
+                
                 return facts.length > 0 ? facts : ['No information available.'];
             } catch (error) {
                 console.error('Error fetching facts from Gemini:', error);
@@ -359,72 +280,59 @@
 
         function displayFactList() {
             factList.innerHTML = '';
-            facts.forEach(fact => {
+            facts.slice(0, 10).forEach(fact => {
                 const factItem = document.createElement('li');
                 factItem.textContent = fact.trim();
                 factList.appendChild(factItem);
             });
 
-            loadMoreBtn.classList.add('hidden');
-            readFactsBtn.classList.remove('hidden'); // Show the read facts button
-            quizBtn.classList.remove('hidden'); // Show the quiz button
+            // Show the "Load More Facts" button if there are more facts
+            if (facts.length > 10) {
+                loadMoreBtn.classList.remove('hidden');
+                loadMoreBtn.addEventListener('click', loadMoreFacts);
+            } else {
+                loadMoreBtn.classList.add('hidden');
+            }
         }
 
-        // Quiz-related functions
-        function startQuiz() {
-            // Generate quiz questions
-            quizQuestions = detectedLandmarks.map((landmark, index) => ({
-                question: `What landmark is this?`,
-                options: [
-                    landmark,
-                    ...detectedLandmarks.filter((_, i) => i !== index).slice(0, 3)
-                ].sort(() => Math.random() - 0.5), // Shuffle options
-                correctAnswer: landmark
-            }));
+        function loadMoreFacts() {
+            const currentFactCount = factList.children.length;
+            const nextFacts = facts.slice(currentFactCount, currentFactCount + 10);
 
-            score = 0;
-            currentQuestionIndex = 0;
-            showQuestion();
+            nextFacts.forEach(fact => {
+                const factItem = document.createElement('li');
+                factItem.textContent = fact.trim();
+                factList.appendChild(factItem);
+            });
+
+            if (factList.children.length >= facts.length) {
+                loadMoreBtn.classList.add('hidden');
+            }
         }
 
-        function showQuestion() {
-            const currentQuestion = quizQuestions[currentQuestionIndex];
-            quizQuestion.textContent = currentQuestion.question;
+        function getNearbyPlaces(location) {
+            const service = new google.maps.places.PlacesService(document.createElement('div'));
+            const request = {
+                location: location,
+                radius: '500',
+                type: ['point_of_interest']
+            };
 
-            quizOptions.innerHTML = '';
-            currentQuestion.options.forEach(option => {
-                const optionItem = document.createElement('li');
-                optionItem.textContent = option;
-                optionItem.onclick = () => checkAnswer(option);
-                quizOptions.appendChild(optionItem);
+            service.nearbySearch(request, (results, status) => {
+                if (status === google.maps.places.PlacesServiceStatus.OK) {
+                    updateNearbyPlacesList(results);
+                }
             });
         }
 
-        function checkAnswer(selectedOption) {
-            const currentQuestion = quizQuestions[currentQuestionIndex];
-            if (selectedOption === currentQuestion.correctAnswer) {
-                score++;
-            }
-
-            currentQuestionIndex++;
-            if (currentQuestionIndex < quizQuestions.length) {
-                showQuestion();
-            } else {
-                showQuizResult();
-            }
+        function updateNearbyPlacesList(places) {
+            placesList.innerHTML = '';
+            places.slice(0, 5).forEach(place => {
+                const li = document.createElement('li');
+                li.textContent = place.name;
+                placesList.appendChild(li);
+            });
         }
-
-        function showQuizResult() {
-            quizContainer.innerHTML = `
-                <div class="quiz-result">
-                    You scored ${score} out of ${quizQuestions.length}.
-                </div>
-                <button class="quiz-btn" onclick="startQuiz()">Try Again</button>
-            `;
-            quizContainer.classList.remove('hidden');
-        }
-
-        quizBtn.addEventListener('click', startQuiz); // Start quiz button handler
     </script>
 </body>
 </html>
