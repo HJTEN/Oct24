@@ -246,7 +246,7 @@
         }
 
         async function getGeminiFacts(landmarkName) {
-            const prompt = `Give me 10 interesting facts about ${landmarkName}. Present each fact as a complete sentence. Focus on historical significance, architectural details, and cultural importance.`;
+            const prompt = `Provide 10 concise and factual points about the landmark "${landmarkName}". Focus on its historical significance, architectural features, cultural importance, and any interesting trivia. Format the response as a numbered list.`;
 
             try {
                 const response = await fetch(`${GEMINI_API_ENDPOINT}?key=${GEMINI_API_KEY}`, {
