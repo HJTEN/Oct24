@@ -12,14 +12,13 @@
             display: flex;
             flex-direction: column;
             min-height: 100vh;
-            background-color: #f7f7f7;
+            overflow: hidden;
         }
         header {
             background-color: #4CAF50;
             color: white;
             text-align: center;
             padding: 1em;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
         nav {
             display: flex;
@@ -30,10 +29,6 @@
         nav a {
             color: white;
             text-decoration: none;
-            font-size: 16px;
-        }
-        nav a:hover {
-            text-decoration: underline;
         }
         main {
             flex: 1;
@@ -42,75 +37,48 @@
             align-items: center;
             padding: 1em;
             overflow-y: auto;
+            width: 100%;
+            box-sizing: border-box;
         }
         #camera-feed {
             width: 100%;
             max-width: 640px;
             height: auto;
             border: 1px solid #ddd;
-            margin-bottom: 1em;
         }
         #landmark-info {
             margin-top: 1em;
+            text-align: center;
             width: 100%;
             max-width: 640px;
-            padding: 1em;
-            background-color: #fff;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            border-radius: 8px;
-        }
-        h2 {
-            font-size: 1.5em;
-            margin-bottom: 0.5em;
-            color: #333;
         }
         #fact-list {
+            margin-top: 1em;
             list-style-type: none;
             padding: 0;
-            margin: 0;
+            width: 100%;
+            max-width: 640px;
         }
         #fact-list li {
-            background-color: #f9f9f9;
+            background-color: #f1f1f1;
             margin: 0.5em 0;
-            padding: 1em;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-            font-size: 1.1em;
-            line-height: 1.6;
-        }
-        .fact-item {
-            margin-bottom: 10px;
-        }
-        .fact-item span {
-            font-weight: bold;
-            color: #4CAF50;
+            padding: 0.5em;
+            border-radius: 5px;
         }
         #load-more-btn {
             background-color: #4CAF50;
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 10px;
             cursor: pointer;
             margin-top: 1em;
-            font-size: 1.1em;
-            border-radius: 5px;
+            font-size: 1em;
         }
         #load-more-btn:hover {
             background-color: #45a049;
         }
         .hidden {
             display: none;
-        }
-        @media (max-width: 600px) {
-            #landmark-info {
-                padding: 0.8em;
-            }
-            h2 {
-                font-size: 1.2em;
-            }
-            #fact-list li {
-                font-size: 1em;
-            }
         }
     </style>
 </head>
@@ -246,30 +214,32 @@
         }
 
         async function getGeminiFacts(landmarkName) {
-            const prompt = `Give me 5 interesting facts about ${landmarkName}. Present each fact as a complete sentence. Focus on historical significance, architectural details, and cultural importance.`;
+            const prompt = `You are a tour guide, Give me 10 interesting facts about ${landmarkName}. Focus on history, architecture, culture`;
 
             try {
-                const response = await fetch(GEMINI_API_ENDPOINT, {
+                const response = await fetch(`${GEMINI_API_ENDPOINT}?key=${GEMINI_API_KEY}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        prompt: prompt,
-                        max_results: 5
+                        contents: [{
+                            parts: [{
+                                text: prompt
+                            }]
+                        }]
                     })
                 });
 
                 const data = await response.json();
-                console.log('Gemini API Response:', data); // Log the response for debugging
-
-                if (data.candidates && data.candidates.length > 0) {
-                    const generatedText = data.candidates[0].content.parts[0].text;
-                    const facts = generatedText.split(/(?<=\.|\?|\!)\s+/).filter(fact => fact.trim().length > 0);
-                    return facts.length > 0 ? facts : ['No information available.'];
-                } else {
-                    return ['Unable to fetch information about this landmark.'];
-                }
+                
+                // Extract the generated text from Gemini's response
+                const generatedText = data.candidates[0].content.parts[0].text;
+                
+                // Split the text into individual facts
+                const facts = generatedText.split(/(?<=\.|\?|\!)\s+/).filter(fact => fact.trim().length > 0);
+                
+                return facts.length > 0 ? facts : ['No information available.'];
             } catch (error) {
                 console.error('Error fetching facts from Gemini:', error);
                 return ['Unable to fetch information about this landmark.'];
@@ -284,6 +254,7 @@
                 factList.appendChild(factItem);
             });
 
+            // Show the "Load More Facts" button if there are more facts
             if (facts.length > 10) {
                 loadMoreBtn.classList.remove('hidden');
                 loadMoreBtn.addEventListener('click', loadMoreFacts);
@@ -330,6 +301,8 @@
                 placesList.appendChild(li);
             });
         }
+
+        window.addEventListener('resize', adjustCarouselHeight);
     </script>
 </body>
 </html>
