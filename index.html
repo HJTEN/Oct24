@@ -101,6 +101,19 @@
         .hidden {
             display: none;
         }
+        #debug-info {
+            margin-top: 20px;
+            background-color: #f44336;
+            color: white;
+            padding: 1em;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 640px;
+            display: none;
+        }
+        #debug-info.success {
+            background-color: #4CAF50;
+        }
         @media (max-width: 600px) {
             #landmark-info {
                 padding: 0.8em;
@@ -141,6 +154,7 @@
             <h2>Nearby Places</h2>
             <ul id="places-list"></ul>
         </section>
+        <div id="debug-info"></div> <!-- Debug info section -->
     </main>
 
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDFS_oqSACK3SkKwjHSzHpX3IJZMWqESTY&libraries=places"></script>
@@ -154,6 +168,7 @@
         const factList = document.getElementById('fact-list');
         const loadMoreBtn = document.getElementById('load-more-btn');
         const placesList = document.getElementById('places-list');
+        const debugInfo = document.getElementById('debug-info');
 
         // API keys and endpoints
         const GOOGLE_API_KEY = 'AIzaSyDFS_oqSACK3SkKwjHSzHpX3IJZMWqESTY';
@@ -199,7 +214,7 @@
                 await cameraFeed.play();
                 detectLandmarks();
             } catch (error) {
-                console.error('Error accessing camera:', error);
+                showDebugInfo('Error accessing camera: ' + error.message);
             }
         }
 
@@ -227,10 +242,13 @@
                 });
 
                 const data = await response.json();
-                if (data.responses[0].landmarkAnnotations) {
+                console.log(data); // Log the response to inspect it
+                if (data.responses[0]?.landmarkAnnotations) {
                     const landmark = data.responses[0].landmarkAnnotations[0];
                     updateLandmarkInfo(landmark.description);
                     getNearbyPlaces(landmark.locations[0].latLng);
+                } else {
+                    showDebugInfo('No landmark detected.');
                 }
 
                 requestAnimationFrame(processFrame);
@@ -264,75 +282,41 @@
                 });
 
                 const data = await response.json();
-                
-                // Extract the generated text from Gemini's response
-                const generatedText = data.candidates[0].content.parts[0].text;
-                
-                // Split the text into individual facts
-                const facts = generatedText.split(/(?<=\.|\?|\!)\s+/).filter(fact => fact.trim().length > 0);
-                
-                return facts.length > 0 ? facts : ['No information available.'];
+                console.log(data); // Log the response to inspect it
+                if (data.candidates && data.candidates.length > 0) {
+                    const generatedText = data.candidates[0].content.parts[0].text;
+                    const facts = generatedText.split(/(?<=\.|\?|\!)\s+/).filter(fact => fact.trim().length > 0);
+                    return facts.length > 0 ? facts : ['No information available.'];
+                } else {
+                    showDebugInfo('No facts returned from Gemini API.');
+                    return ['No information available.'];
+                }
             } catch (error) {
-                console.error('Error fetching facts from Gemini:', error);
-                return ['Unable to fetch information about this landmark.'];
+                showDebugInfo('Error fetching Gemini facts: ' + error.message);
+                return ['No information available.'];
             }
         }
 
         function displayFactList() {
-            factList.innerHTML = '';
-            facts.slice(0, 10).forEach(fact => {
-                const factItem = document.createElement('li');
-                factItem.textContent = fact.trim();
-                factList.appendChild(factItem);
-            });
+            factList.innerHTML = facts.slice(0, 3).map(fact => `<li class="fact-item">${fact}</li>`).join('');
+            loadMoreBtn.classList.toggle('hidden', facts.length <= 3);
+        }
 
-            // Show the "Load More Facts" button if there are more facts
-            if (facts.length > 10) {
-                loadMoreBtn.classList.remove('hidden');
-                loadMoreBtn.addEventListener('click', loadMoreFacts);
-            } else {
-                loadMoreBtn.classList.add('hidden');
+        loadMoreBtn.addEventListener('click', () => {
+            currentFactIndex += 3;
+            const additionalFacts = facts.slice(currentFactIndex, currentFactIndex + 3);
+            factList.innerHTML += additionalFacts.map(fact => `<li class="fact-item">${fact}</li>`).join('');
+            loadMoreBtn.classList.toggle('hidden', currentFactIndex + 3 >= facts.length);
+        });
+
+        function showDebugInfo(message) {
+            debugInfo.textContent = message;
+            debugInfo.classList.add('hidden');
+            if (message.includes('No landmark detected') || message.includes('No facts returned') || message.includes('Error')) {
+                debugInfo.classList.remove('hidden');
             }
-        }
-
-        function loadMoreFacts() {
-            const currentFactCount = factList.children.length;
-            const nextFacts = facts.slice(currentFactCount, currentFactCount + 10);
-
-            nextFacts.forEach(fact => {
-                const factItem = document.createElement('li');
-                factItem.textContent = fact.trim();
-                factList.appendChild(factItem);
-            });
-
-            if (factList.children.length >= facts.length) {
-                loadMoreBtn.classList.add('hidden');
-            }
-        }
-
-        function getNearbyPlaces(location) {
-            const service = new google.maps.places.PlacesService(document.createElement('div'));
-            const request = {
-                location: location,
-                radius: '500',
-                type: ['point_of_interest']
-            };
-
-            service.nearbySearch(request, (results, status) => {
-                if (status === google.maps.places.PlacesServiceStatus.OK) {
-                    updateNearbyPlacesList(results);
-                }
-            });
-        }
-
-        function updateNearbyPlacesList(places) {
-            placesList.innerHTML = '';
-            places.slice(0, 5).forEach(place => {
-                const li = document.createElement('li');
-                li.textContent = place.name;
-                placesList.appendChild(li);
-            });
         }
     </script>
 </body>
 </html>
+
