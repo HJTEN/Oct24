@@ -31,9 +31,13 @@
             color: white;
             text-decoration: none;
             font-size: 16px;
+            padding: 10px 15px;
+            border-radius: 4px;
+            transition: background-color 0.3s;
         }
         nav a:hover {
-            text-decoration: underline;
+            background-color: #555;
+            text-decoration: none;
         }
         main {
             flex: 1;
@@ -43,12 +47,77 @@
             padding: 1em;
             overflow-y: auto;
         }
+        .hidden {
+            display: none !important;
+        }
+        section {
+            width: 100%;
+            max-width: 640px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #home {
+            text-align: center;
+            padding: 20px;
+        }
+        #start-exploring {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 18px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-top: 20px;
+        }
+        #start-exploring:hover {
+            background-color: #3e8e41;
+        }
+        .camera-container {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+        }
         #camera-feed {
             width: 100%;
             max-width: 640px;
             height: auto;
             border: 1px solid #ddd;
             margin-bottom: 1em;
+            border-radius: 8px;
+        }
+        #scanning-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            border: 2px solid #4CAF50;
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+        #scanning-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(76, 175, 80, 0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        #pause-scan-btn {
+            background-color: #ff5722;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 15px;
         }
         #landmark-info {
             margin-top: 1em;
@@ -59,10 +128,120 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             border-radius: 8px;
         }
+        #landmark-info h2 {
+            color: #4CAF50;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        #fact-list {
+            padding-left: 20px;
+        }
+        #fact-list li {
+            margin-bottom: 8px;
+        }
+        #load-more-btn {
+            background-color: #333;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
         #error-message {
-            color: red;
+            color: white;
             font-weight: bold;
             margin-top: 10px;
+            background-color: #f44336;
+            padding: 10px;
+            border-radius: 4px;
+            width: 100%;
+            max-width: 640px;
+            text-align: center;
+        }
+        .spinner {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+            margin-right: 5px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        #settings-btn {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+        }
+        #settings-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .settings-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 500px;
+        }
+        .settings-content h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .settings-row {
+            margin-bottom: 15px;
+        }
+        .settings-row label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .settings-row input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .settings-footer {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+        .settings-footer button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            margin-left: 10px;
+            cursor: pointer;
+        }
+        #save-settings {
+            background-color: #4CAF50;
+            color: white;
+        }
+        #cancel-settings {
+            background-color: #f44336;
+            color: white;
         }
     </style>
 </head>
@@ -71,19 +250,29 @@
         <h1>P.O.I. Explorer</h1>
     </header>
     <nav>
-        <a href="#home">Home</a>
-        <a href="#explore">Explore</a>
+        <a href="#" id="home-link">Home</a>
+        <a href="#" id="explore-link">Explore</a>
     </nav>
     <main id="main-content">
-        <section id="home" class="active">
+        <section id="home">
             <h2>Welcome to P.O.I. Explorer</h2>
+            <p>Discover interesting facts about landmarks around you in real-time!</p>
             <button id="start-exploring">Start Exploring</button>
         </section>
         <section id="explore" class="hidden">
-            <video id="camera-feed" autoplay playsinline></video>
-            <canvas id="canvas" style="display:none;"></canvas>
-            <div id="landmark-info">
-                <h2>Landmark Name</h2>
+            <div class="camera-container">
+                <video id="camera-feed" autoplay playsinline></video>
+                <canvas id="canvas" style="display:none;"></canvas>
+                <div id="scanning-overlay"></div>
+                <div id="scanning-indicator">
+                    <div class="spinner"></div>
+                    <span id="scan-status">Scanning...</span>
+                </div>
+                <button id="settings-btn">⚙️</button>
+            </div>
+            <button id="pause-scan-btn">Pause Scanning</button>
+            <div id="landmark-info" class="hidden">
+                <h2 id="landmark-name">Landmark Name</h2>
                 <ul id="fact-list"></ul>
                 <button id="load-more-btn" class="hidden">Load More Facts</button>
             </div>
@@ -91,32 +280,392 @@
         </section>
     </main>
 
+    <div id="settings-panel" class="hidden">
+        <div class="settings-content">
+            <h3>App Settings</h3>
+            <div class="settings-row">
+                <label for="api-key">Google Cloud API Key:</label>
+                <input type="text" id="api-key" placeholder="Enter your API key here">
+            </div>
+            <div class="settings-row">
+                <label for="scan-interval">Scan Interval (seconds):</label>
+                <input type="number" id="scan-interval" min="1" max="10" step="1" value="3">
+            </div>
+            <div class="settings-footer">
+                <button id="cancel-settings">Cancel</button>
+                <button id="save-settings">Save</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        const API_KEY = 'AIzaSyAd148SWcb1gYmp8PGSwCH7cKEAXys_KHQ';
-        const VISION_API_ENDPOINT = `https://vision.googleapis.com/v1/images:annotate?key=${API_KEY}`;
-        const GEMINI_API_ENDPOINT = `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${API_KEY}`;
+        // Default settings (will be overridden by user settings if available)
+        let settings = {
+            apiKey: '',
+            scanInterval: 3 // seconds
+        };
         
+        // Load saved settings if available
+        if (localStorage.getItem('poiExplorerSettings')) {
+            try {
+                settings = JSON.parse(localStorage.getItem('poiExplorerSettings'));
+            } catch (e) {
+                console.error('Error loading settings:', e);
+            }
+        }
+        
+        function getApiEndpoints() {
+            return {
+                vision: `https://vision.googleapis.com/v1/images:annotate?key=${settings.apiKey}`,
+                gemini: `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${settings.apiKey}`
+            };
+        }
+        
+        const homeLink = document.getElementById('home-link');
+        const exploreLink = document.getElementById('explore-link');
         const startExploringBtn = document.getElementById('start-exploring');
+        const pauseScanBtn = document.getElementById('pause-scan-btn');
         const cameraFeed = document.getElementById('camera-feed');
         const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
         const errorMessage = document.getElementById('error-message');
+        const landmarkInfo = document.getElementById('landmark-info');
+        const landmarkName = document.getElementById('landmark-name');
+        const factList = document.getElementById('fact-list');
+        const loadMoreBtn = document.getElementById('load-more-btn');
+        const scanStatus = document.getElementById('scan-status');
+        const settingsBtn = document.getElementById('settings-btn');
+        const settingsPanel = document.getElementById('settings-panel');
+        const apiKeyInput = document.getElementById('api-key');
+        const scanIntervalInput = document.getElementById('scan-interval');
+        const saveSettingsBtn = document.getElementById('save-settings');
+        const cancelSettingsBtn = document.getElementById('cancel-settings');
+        
         let facts = [];
+        let currentLandmark = null;
+        let factIndex = 0;
+        let scanning = false;
+        let scanTimer = null;
+        let lastDetectionTime = 0;
+        const DETECTION_COOLDOWN = 10000; // 10 seconds cooldown between detections of the same landmark
+        
+        // Initialize settings UI
+        apiKeyInput.value = settings.apiKey || 'AIzaSyAd148SWcb1gYmp8PGSwCH7cKEAXys_KHQ';
+        scanIntervalInput.value = settings.scanInterval || 3;
+        
+        // Navigation
+        homeLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            stopScanning();
+            showSection('home');
+        });
+
+        exploreLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            showSection('explore');
+            startCamera();
+        });
 
         startExploringBtn.addEventListener('click', async () => {
-            const exploreSection = document.getElementById('explore');
-            document.querySelectorAll('section').forEach(sec => sec.classList.add('hidden'));
-            exploreSection.classList.remove('hidden');
+            showSection('explore');
             await startCamera();
         });
+        
+        pauseScanBtn.addEventListener('click', toggleScanning);
+        loadMoreBtn.addEventListener('click', showMoreFacts);
+        
+        // Settings panel
+        settingsBtn.addEventListener('click', () => {
+            settingsPanel.classList.remove('hidden');
+            pauseScanning();
+        });
+        
+        saveSettingsBtn.addEventListener('click', () => {
+            settings.apiKey = apiKeyInput.value.trim();
+            settings.scanInterval = parseInt(scanIntervalInput.value) || 3;
+            
+            localStorage.setItem('poiExplorerSettings', JSON.stringify(settings));
+            settingsPanel.classList.add('hidden');
+            
+            // Resume scanning if it was active
+            if (scanning) {
+                startScanning();
+            }
+        });
+        
+        cancelSettingsBtn.addEventListener('click', () => {
+            // Restore values from settings
+            apiKeyInput.value = settings.apiKey || '';
+            scanIntervalInput.value = settings.scanInterval || 3;
+            
+            settingsPanel.classList.add('hidden');
+            
+            // Resume scanning if it was active
+            if (scanning) {
+                startScanning();
+            }
+        });
+
+        function showSection(sectionId) {
+            document.querySelectorAll('section').forEach(sec => sec.classList.add('hidden'));
+            document.getElementById(sectionId).classList.remove('hidden');
+        }
 
         async function startCamera() {
             try {
+                // Stop any existing stream first
+                if (cameraFeed.srcObject) {
+                    cameraFeed.srcObject.getTracks().forEach(track => track.stop());
+                }
+                
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'environment' }
+                    video: { 
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
                 });
                 cameraFeed.srcObject = stream;
+                
+                // Wait for video to be ready
+                cameraFeed.onloadedmetadata = () => {
+                    canvas.width = cameraFeed.videoWidth;
+                    canvas.height = cameraFeed.videoHeight;
+                    startScanning();
+                };
+                
+                hideError();
             } catch (error) {
                 showError('Error accessing camera: ' + error.message);
+            }
+        }
+        
+        function startScanning() {
+            if (!settings.apiKey) {
+                showError('API key is not configured. Please add your Google Cloud API key in Settings.');
+                pauseScanning();
+                return;
+            }
+            
+            scanning = true;
+            pauseScanBtn.textContent = "Pause Scanning";
+            scanStatus.textContent = "Scanning...";
+            
+            // Clear any existing timer
+            if (scanTimer) {
+                clearInterval(scanTimer);
+            }
+            
+            // Set interval for regular scanning
+            scanTimer = setInterval(scanForLandmarks, settings.scanInterval * 1000);
+            
+            // Perform initial scan immediately
+            scanForLandmarks();
+        }
+        
+        function pauseScanning() {
+            scanning = false;
+            pauseScanBtn.textContent = "Resume Scanning";
+            scanStatus.textContent = "Paused";
+            
+            if (scanTimer) {
+                clearInterval(scanTimer);
+                scanTimer = null;
+            }
+        }
+        
+        function toggleScanning() {
+            if (scanning) {
+                pauseScanning();
+            } else {
+                startScanning();
+            }
+        }
+        
+        function stopScanning() {
+            pauseScanning();
+            
+            // Stop camera
+            if (cameraFeed.srcObject) {
+                cameraFeed.srcObject.getTracks().forEach(track => track.stop());
+                cameraFeed.srcObject = null;
+            }
+        }
+
+        async function scanForLandmarks() {
+            if (!scanning) return;
+            
+            try {
+                // Check if API key is set
+                if (!settings.apiKey) {
+                    showError('API key is not configured. Please add your Google Cloud API key in Settings.');
+                    pauseScanning();
+                    return;
+                }
+
+                const endpoints = getApiEndpoints();
+                
+                // Capture image from video feed
+                canvas.width = cameraFeed.videoWidth;
+                canvas.height = cameraFeed.videoHeight;
+                ctx.drawImage(cameraFeed, 0, 0, canvas.width, canvas.height);
+                
+                // Convert canvas to base64 image
+                const imageData = canvas.toDataURL('image/jpeg', 0.7).split(',')[1];
+                
+                // Prepare API request
+                const response = await fetch(endpoints.vision, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        requests: [{
+                            image: {
+                                content: imageData
+                            },
+                            features: [
+                                {
+                                    type: 'LANDMARK_DETECTION',
+                                    maxResults: 5
+                                }
+                            ]
+                        }]
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`Vision API error: ${errorData.error?.message || response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                // Process the response
+                if (data.responses && data.responses[0].landmarkAnnotations && data.responses[0].landmarkAnnotations.length > 0) {
+                    const landmark = data.responses[0].landmarkAnnotations[0];
+                    const detectedLandmark = landmark.description;
+                    
+                    // Only process if this is a new landmark or if enough time has passed since last detection
+                    const now = Date.now();
+                    if (detectedLandmark !== currentLandmark || now - lastDetectionTime > DETECTION_COOLDOWN) {
+                        currentLandmark = detectedLandmark;
+                        lastDetectionTime = now;
+                        
+                        // Display landmark name
+                        landmarkName.textContent = currentLandmark;
+                        
+                        // Get facts about the landmark
+                        await getFacts(currentLandmark);
+                        
+                        // Show landmark info
+                        landmarkInfo.classList.remove('hidden');
+                    }
+                }
+            } catch (error) {
+                showError('Error: ' + error.message);
+                console.error(error);
+                
+                // Pause scanning on API errors to prevent quota issues
+                if (error.message.includes('API') || error.message.includes('quota')) {
+                    pauseScanning();
+                }
+            }
+        }
+
+        async function getFacts(landmarkName) {
+            try {
+                factList.innerHTML = '';
+                facts = [];
+                factIndex = 0;
+                
+                const endpoints = getApiEndpoints();
+                
+                const response = await fetch(endpoints.gemini, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: `Give me 10 interesting facts about ${landmarkName}. Return as a JSON array of fact strings without any introduction or conclusion.`
+                            }]
+                        }]
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`Gemini API error: ${errorData.error?.message || response.statusText}`);
+                }
+                
+                const data = await response.json();
+                const textResponse = data.candidates[0].content.parts[0].text;
+                
+                // Try to parse JSON response
+                try {
+                    // Extract JSON array from text if needed
+                    const jsonMatch = textResponse.match(/\[[\s\S]*\]/);
+                    if (jsonMatch) {
+                        facts = JSON.parse(jsonMatch[0]);
+                    } else {
+                        // Fallback: split by newlines if JSON parsing fails
+                        facts = textResponse.split('\n')
+                            .filter(line => line.trim().startsWith('-') || line.trim().match(/^\d+\./))
+                            .map(line => line.replace(/^[-\d.]+\s*/, '').trim());
+                    }
+                } catch (e) {
+                    console.error("Error parsing facts:", e);
+                    // Fallback: split by newlines
+                    facts = textResponse.split('\n')
+                        .filter(line => line.trim().length > 10)
+                        .map(line => line.replace(/^[-\d.]+\s*/, '').trim());
+                }
+                
+                showFacts();
+            } catch (error) {
+                showError('Error getting facts: ' + error.message);
+            }
+        }
+
+        function showFacts() {
+            // Clear existing facts
+            factList.innerHTML = '';
+            
+            // Show first 3 facts (or all if less than 3)
+            const factsToShow = Math.min(3, facts.length);
+            
+            for (let i = 0; i < factsToShow; i++) {
+                const li = document.createElement('li');
+                li.textContent = facts[i];
+                factList.appendChild(li);
+                factIndex = i + 1;
+            }
+            
+            // Show or hide load more button
+            if (factIndex < facts.length) {
+                loadMoreBtn.classList.remove('hidden');
+            } else {
+                loadMoreBtn.classList.add('hidden');
+            }
+        }
+
+        function showMoreFacts() {
+            // Show next 3 facts
+            const nextFactsToShow = Math.min(3, facts.length - factIndex);
+            
+            for (let i = 0; i < nextFactsToShow; i++) {
+                const li = document.createElement('li');
+                li.textContent = facts[factIndex + i];
+                factList.appendChild(li);
+            }
+            
+            factIndex += nextFactsToShow;
+            
+            // Hide button if all facts are shown
+            if (factIndex >= facts.length) {
+                loadMoreBtn.classList.add('hidden');
             }
         }
 
@@ -124,6 +673,15 @@
             errorMessage.textContent = message;
             errorMessage.classList.remove('hidden');
             console.error(message);
+            
+            // Auto-hide error after 5 seconds
+            setTimeout(() => {
+                errorMessage.classList.add('hidden');
+            }, 5000);
+        }
+
+        function hideError() {
+            errorMessage.classList.add('hidden');
         }
     </script>
 </body>
