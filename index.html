@@ -116,8 +116,6 @@
 
     <script>
         // *** IMPORTANT: REPLACE THIS WITH YOUR ACTUAL API KEY ***
-        // This key will NOT be exposed in the UI, but keep in mind that
-        // it will still be visible in the source code
         const API_KEY = 'AIzaSyAd148SWcb1gYmp8PGSwCH7cKEAXys_KHQ';
         
         // API endpoints
@@ -143,17 +141,12 @@
         async function startCamera() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { 
-                        facingMode: 'environment',
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    }
+                    video: { facingMode: 'environment' }
                 });
                 cameraFeed.srcObject = stream;
                 hideError();
             } catch (error) {
-                showError('Camera access error: Please allow camera access to use this app.');
-                console.error(error);
+                showError('Camera access error. Please allow camera access to use this app.');
             }
         }
 
@@ -161,7 +154,7 @@
             try {
                 // Validate API key
                 if (!API_KEY || API_KEY === 'YOUR_API_KEY_HERE') {
-                    showError('API key is not configured. Please add your Google Cloud API key.');
+                    showError('API key error: API key is not configured.');
                     return;
                 }
                 
@@ -176,32 +169,37 @@
                 ctx.drawImage(cameraFeed, 0, 0, canvas.width, canvas.height);
                 
                 // Convert canvas to base64 image
-                const imageData = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+                const imageData = canvas.toDataURL('image/jpeg').split(',')[1];
                 
                 // Call Vision API to detect landmark
-                const visionResponse = await fetch(VISION_API_ENDPOINT, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        requests: [{
-                            image: {
-                                content: imageData
-                            },
-                            features: [
-                                {
-                                    type: 'LANDMARK_DETECTION',
-                                    maxResults: 1
-                                }
-                            ]
-                        }]
-                    })
-                });
-                
-                if (!visionResponse.ok) {
-                    const errorData = await visionResponse.json();
-                    throw new Error(errorData.error?.message || 'Vision API error');
+                let visionResponse;
+                try {
+                    visionResponse = await fetch(VISION_API_ENDPOINT, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            requests: [{
+                                image: {
+                                    content: imageData
+                                },
+                                features: [
+                                    {
+                                        type: 'LANDMARK_DETECTION',
+                                        maxResults: 1
+                                    }
+                                ]
+                            }]
+                        })
+                    });
+                    
+                    if (!visionResponse.ok) {
+                        const errorData = await visionResponse.json();
+                        throw new Error('Vision API error: ' + (errorData.error?.message || 'Unknown error'));
+                    }
+                } catch (error) {
+                    throw new Error('Vision API error: Failed to detect landmark');
                 }
                 
                 const visionData = await visionResponse.json();
@@ -209,7 +207,7 @@
                 // Check if a landmark was detected
                 if (!visionData.responses[0].landmarkAnnotations || 
                     visionData.responses[0].landmarkAnnotations.length === 0) {
-                    showError('No landmark detected. Please try again with a clearer view of a landmark.');
+                    showError('No landmark detected. Please try pointing at a recognizable landmark.');
                     loadingSpinner.classList.add('hidden');
                     return;
                 }
@@ -219,23 +217,27 @@
                 landmarkName.textContent = detectedLandmark;
                 
                 // Call Gemini API to get facts about the landmark
-                const geminiResponse = await fetch(GEMINI_API_ENDPOINT, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [{
-                                text: `Give me 5 interesting facts about ${detectedLandmark}. Respond with just bullet points, no introduction or conclusion.`
+                let geminiResponse;
+                try {
+                    geminiResponse = await fetch(GEMINI_API_ENDPOINT, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [{
+                                    text: `Give me 5 interesting facts about ${detectedLandmark}. Respond with just bullet points, no introduction or conclusion.`
+                                }]
                             }]
-                        }]
-                    })
-                });
-                
-                if (!geminiResponse.ok) {
-                    const errorData = await geminiResponse.json();
-                    throw new Error(errorData.error?.message || 'Gemini API error');
+                        })
+                    });
+                    
+                    if (!geminiResponse.ok) {
+                        throw new Error('Gemini API error: Failed to get facts');
+                    }
+                } catch (error) {
+                    throw new Error('Gemini API error: Failed to get facts');
                 }
                 
                 const geminiData = await geminiResponse.json();
@@ -250,19 +252,11 @@
                 landmarkInfo.classList.remove('hidden');
                 
             } catch (error) {
-                console.error('Error:', error);
-                
                 let errorMsg = error.message;
                 
-                // Provide clearer error messages based on error type
-                if (errorMsg.includes('API key')) {
-                    errorMsg = 'API key error: The API key is invalid or has insufficient permissions.';
-                } else if (errorMsg.includes('quota')) {
-                    errorMsg = 'API quota exceeded: Please try again later.';
-                } else if (errorMsg.includes('billing')) {
-                    errorMsg = 'Billing error: Check if billing is enabled for your Google Cloud project.';
-                } else if (!navigator.onLine) {
-                    errorMsg = 'Network error: Please check your internet connection.';
+                // Check for specific API key errors
+                if (errorMsg.includes('API key not valid') || errorMsg.includes('invalid API key')) {
+                    errorMsg = 'API key error: Invalid API key';
                 }
                 
                 showError(errorMsg);
@@ -274,7 +268,6 @@
         function showError(message) {
             errorMessage.textContent = message;
             errorMessage.classList.remove('hidden');
-            console.error(message);
         }
 
         function hideError() {
