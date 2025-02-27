@@ -133,42 +133,25 @@
         const loadMoreBtn = document.getElementById('load-more-btn');
         let facts = [];
 
-        async function detectLandmarks() {
-            const ctx = canvas.getContext('2d');
-            canvas.width = cameraFeed.videoWidth;
-            canvas.height = cameraFeed.videoHeight;
-            ctx.drawImage(cameraFeed, 0, 0, canvas.width, canvas.height);
-            const imageData = canvas.toDataURL('image/jpeg', 0.8);
-            const base64Image = imageData.split(',')[1];
+        startExploringBtn.addEventListener('click', async () => {
+            const exploreSection = document.getElementById('explore');
+            document.querySelectorAll('section').forEach(sec => sec.classList.add('hidden'));
+            exploreSection.classList.remove('hidden');
+            await startCamera();
+        });
 
-            const response = await fetch(VISION_API_ENDPOINT, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ requests: [{ image: { content: base64Image }, features: [{ type: 'LANDMARK_DETECTION', maxResults: 1 }] }] })
-            });
-            
-            const data = await response.json();
-            if (data.responses[0].landmarkAnnotations) {
-                const landmark = data.responses[0].landmarkAnnotations[0].description;
-                updateLandmarkInfo(landmark);
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' }
+                });
+                cameraFeed.srcObject = stream;
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+                alert('Camera access is required for this feature. Please enable it in your browser settings.');
             }
-        }
-
-        async function updateLandmarkInfo(landmarkName) {
-            landmarkInfo.querySelector('h2').textContent = landmarkName;
-            facts = await getGeminiFacts(landmarkName);
-            displayFactList();
-        }
-
-        async function getGeminiFacts(landmarkName) {
-            const response = await fetch(GEMINI_API_ENDPOINT, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: `Provide 10 facts about ${landmarkName}` }] }] })
-            });
-            const data = await response.json();
-            return data.candidates[0].content.parts[0].text.split('\n');
         }
     </script>
 </body>
 </html>
+
